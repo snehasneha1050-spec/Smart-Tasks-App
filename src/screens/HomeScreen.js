@@ -36,15 +36,25 @@ const HomeScreen = ({ navigation }) => {
 
   // Sort tasks
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    if (sortBy === 'priority') {
-      const priorityOrder = { 'High': 1, 'Medium': 2, 'Low': 3 };
-      return (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
-    }
-    if (sortBy === 'title') {
-      return a.title.localeCompare(b.title);
-    }
-    return 0;
-  });
+  if (sortBy === 'priority') {
+    const priorityOrder = { high: 3, medium: 2, low: 1 };
+
+    const aPriority = a.priority?.toLowerCase() || 'low';
+    const bPriority = b.priority?.toLowerCase() || 'low';
+
+    return priorityOrder[aPriority] - priorityOrder[bPriority];
+  }
+//Title sorting 
+  if (sortBy === 'title') {
+    return a.title.localeCompare(b.title);
+  }
+   // ✅ Date sorting (latest first)
+  if (sortBy === 'date') {
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  }
+
+  return 0;
+});
 
   const handleTaskPress = (task) => {
     navigation.navigate('TaskDetail', { task });
@@ -60,7 +70,6 @@ const HomeScreen = ({ navigation }) => {
       </Text>
     </TouchableOpacity>
   );
-
   const renderSortButton = (sortType, label) => (
     <TouchableOpacity
       style={[styles.sortButton, sortBy === sortType && styles.sortButtonActive]}
@@ -75,9 +84,13 @@ const HomeScreen = ({ navigation }) => {
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim, backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.greeting, { color: colors.text }]}>Hello, Admin! 👋</Text>
-        <Text style={[styles.subText, { color: colors.textSecondary }]}>{t.tasks}</Text>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.greeting}>{t.helloAdmin}</Text>
+            <Text style={styles.subText}>{t.tasks}</Text>
+          </View>
+        </View>
       </View>
 
       {/* Task Statistics */}
@@ -122,6 +135,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.sortButtons}>
           {renderSortButton('priority', t.priority)}
           {renderSortButton('title', t.title)}
+          {renderSortButton('date', t.date)}
         </View>
       </View>
 
@@ -171,23 +185,34 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 24,
+    paddingTop: 40,
+    paddingBottom: 30,
     backgroundColor: '#6200EA',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 5,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: '#6200EA',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   greeting: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#FFF',
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   subText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#E0E0E0',
-    marginTop: 8,
+    marginTop: 6,
     fontWeight: '500',
+    letterSpacing: 0.3,
   },
   statsContainer: {
     flexDirection: 'row',

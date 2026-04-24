@@ -5,6 +5,7 @@ import { store } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { loadTasks } from './src/store/taskSlice';
 import { loadTasks as loadTasksFromStorage } from './src/utils/storage';
+import { CustomAlertProvider } from './src/components/CustomAlert';
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -32,6 +33,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <AppContent />
+      <CustomAlertProvider />
     </Provider>
   );
 }

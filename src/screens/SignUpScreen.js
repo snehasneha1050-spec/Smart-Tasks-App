@@ -5,12 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar
 } from 'react-native';
+import { CustomAlert as Alert } from '../components/CustomAlert';
 
 const SignUpScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
@@ -29,8 +29,9 @@ const SignUpScreen = ({ navigation }) => {
     }
     
     // Navigate to the Login screen upon successful signup
-    Alert.alert('Success', 'Account Created Successfully! 🎉');
-    navigation.replace('Login');
+    Alert.alert('Success', 'Account Created Successfully! 🎉', [
+      { text: 'OK', onPress: () => navigation.replace('Login') }
+    ]);
   };
 
   return (

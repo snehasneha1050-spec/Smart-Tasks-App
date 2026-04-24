@@ -7,11 +7,11 @@ import {
   StyleSheet, 
   KeyboardAvoidingView, 
   Platform,
-  ScrollView,
-  Alert
+  ScrollView
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { addTask } from '../store/taskSlice';
+import { CustomAlert as Alert } from '../components/CustomAlert';
 
 const AddTaskScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -42,6 +42,8 @@ const AddTaskScreen = ({ navigation }) => {
       category: category,
       priority: priority,
       completed: false,
+       // ✅ Added createdAt for date sorting
+    createdAt: new Date().toISOString(),
     };
     
     dispatch(addTask(newTask));

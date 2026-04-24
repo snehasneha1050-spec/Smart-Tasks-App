@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { toggleComplete, deleteTask } from '../store/taskSlice';
+import { CustomAlert as Alert } from '../components/CustomAlert';
 
 const TaskDetailScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();

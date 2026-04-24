@@ -11,7 +11,12 @@ const TaskCard = ({ task, onPress }) => {
         </Text>
       </View>
       <Text style={styles.description} numberOfLines={2}>{task.description}</Text>
-      <Text style={styles.category}>{task.category}</Text>
+      <View style={styles.footerRow}>
+        <Text style={styles.category}>{task.category}</Text>
+        <Text style={[styles.status, task.completed ? styles.statusCompleted : styles.statusPending]}>
+          {task.completed ? '✓ Completed' : '⏳ Pending'}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -24,7 +29,11 @@ const styles = StyleSheet.create({
   high: { backgroundColor: '#FF5252' },
   medium: { backgroundColor: '#FFC107' },
   description: { fontSize: 14, color: '#666', marginBottom: 10 },
-  category: { fontSize: 12, color: '#6200EA', fontWeight: 'bold' }
+  category: { fontSize: 12, color: '#6200EA', fontWeight: 'bold' },
+  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  status: { fontSize: 12, fontWeight: 'bold' },
+  statusCompleted: { color: '#4CAF50' },
+  statusPending: { color: '#FF9800' }
 });
 
 export default TaskCard;

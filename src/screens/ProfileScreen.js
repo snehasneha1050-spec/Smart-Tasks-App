@@ -1,70 +1,76 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSelector } from 'react-redux';
+import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../hooks/useTheme';
 
 const ProfileScreen = ({ navigation }) => {
   const tasks = useSelector(state => state.tasks.tasks);
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+
   const completedCount = tasks.filter(t => t.completed).length;
   const pendingCount = tasks.filter(t => !t.completed).length;
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Profile Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.avatarPlaceholder}>
           <Text style={styles.avatarText}>📌</Text>
         </View>
-        <Text style={styles.name}>Smart Tasks Manager</Text>
-        <Text style={styles.role}>Task Management</Text>
+        <Text style={styles.name}>{t.appName}</Text>
+        <Text style={styles.role}>{t.taskManagement}</Text>
       </View>
 
       {/* Stats Section */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground }]}>
         <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{completedCount}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>{completedCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t.completed}</Text>
         </View>
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{pendingCount}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>{pendingCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t.pending}</Text>
         </View>
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <View style={styles.statBox}>
-          <Text style={styles.statNumber}>{tasks.length}</Text>
-          <Text style={styles.statLabel}>Total</Text>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>{tasks.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t.total}</Text>
         </View>
       </View>
 
       {/* Menu Options */}
       <View style={styles.menuContainer}>
         <TouchableOpacity
-          style={styles.menuItem}
+          style={[styles.menuItem, { backgroundColor: colors.cardBackground }]}
           onPress={() => navigation.navigate('Settings')}
         >
           <Text style={styles.menuIcon}>⚙️</Text>
           <View style={styles.menuContent}>
-            <Text style={styles.menuText}>Settings</Text>
-            <Text style={styles.menuSubtext}>Manage preferences</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>{t.settings}</Text>
+            <Text style={[styles.menuSubtext, { color: colors.textSecondary }]}>{t.managePreferences}</Text>
           </View>
-          <Text style={styles.menuArrow}>›</Text>
+          <Text style={[styles.menuArrow, { color: colors.textSecondary }]}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.cardBackground }]}>
           <Text style={styles.menuIcon}>📊</Text>
           <View style={styles.menuContent}>
-            <Text style={styles.menuText}>Statistics</Text>
-            <Text style={styles.menuSubtext}>View your progress</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>{t.taskStatistics}</Text>
+            <Text style={[styles.menuSubtext, { color: colors.textSecondary }]}>{t.viewProgress}</Text>
           </View>
-          <Text style={styles.menuArrow}>›</Text>
+          <Text style={[styles.menuArrow, { color: colors.textSecondary }]}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={[styles.menuItem, { backgroundColor: colors.cardBackground }]}>
           <Text style={styles.menuIcon}>ℹ️</Text>
           <View style={styles.menuContent}>
-            <Text style={styles.menuText}>About App</Text>
-            <Text style={styles.menuSubtext}>Version 1.0</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>{t.about}</Text>
+            <Text style={[styles.menuSubtext, { color: colors.textSecondary }]}>{t.version} 1.0</Text>
           </View>
-          <Text style={styles.menuArrow}>›</Text>
+          <Text style={[styles.menuArrow, { color: colors.textSecondary }]}>›</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -92,4 +98,4 @@ const styles = StyleSheet.create({
   menuArrow: { fontSize: 20, color: '#ccc', fontWeight: 'bold' },
 });
 
-export default ProfileScreen;
+export default ProfileScreen

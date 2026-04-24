@@ -26,6 +26,7 @@ export const translations = {
     settings: 'Settings',
 
     // Home Screen
+    helloAdmin: 'Hello, Admin! 👋',
     tasks: 'Tasks',
     allTasks: 'All Tasks',
     completed: 'Completed',
@@ -73,6 +74,10 @@ export const translations = {
     taskStatistics: 'Task Statistics',
     accountSettings: 'Account Settings',
     appSettings: 'App Settings',
+    total: 'Total',
+    taskManagement: 'Task Management',
+    managePreferences: 'Manage preferences',
+    viewProgress: 'View your progress',
 
     // Settings Screen
     settingsTitle: 'Settings',
@@ -128,6 +133,7 @@ export const translations = {
     settings: 'सेटिंग्स',
 
     // Home Screen
+    helloAdmin: 'नमस्ते, एडमिन! 👋',
     tasks: 'कार्य',
     allTasks: 'सभी कार्य',
     completed: 'पूर्ण',
@@ -175,6 +181,10 @@ export const translations = {
     taskStatistics: 'कार्य आंकड़े',
     accountSettings: 'खाता सेटिंग्स',
     appSettings: 'ऐप सेटिंग्स',
+    total: 'कुल',
+    taskManagement: 'कार्य प्रबंधन',
+    managePreferences: 'प्राथमिकताएं प्रबंधित करें',
+    viewProgress: 'अपनी प्रगति देखें',
 
     // Settings Screen
     settingsTitle: 'सेटिंग्स',
