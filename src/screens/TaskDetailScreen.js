@@ -1,31 +1,36 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { toggleComplete, deleteTask } from '../store/taskSlice';
 import { CustomAlert as Alert } from '../components/CustomAlert';
+import { useTranslation } from '../hooks/useTranslation';
 
 const TaskDetailScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const { task } = route.params || {};
+  const { t } = useTranslation();
+  const passedTask = route.params?.task;
+
+  // Fetch the latest task details from Redux store so UI updates immediately
+  const task = useSelector(state => state.tasks.tasks.find(t => t.id === passedTask?.id));
 
   if (!task) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Task not found</Text>
+        <Text style={styles.errorText}>{t.taskNotFound || 'Task not found'}</Text>
       </View>
     );
   }
 
   const handleToggleComplete = () => {
     dispatch(toggleComplete(task.id));
-    Alert.alert('Success', task.completed ? 'Task marked as pending!' : 'Task marked as completed! 🎉');
+    Alert.alert(t.success || 'Success', task.completed ? (t.taskMarkedPending || 'Task marked as pending!') : (t.taskMarkedCompleted || 'Task marked as completed! 🎉'));
   };
 
   const handleDeleteTask = () => {
-    Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
-      { text: 'Cancel', onPress: () => {} },
+    Alert.alert(t.deleteTask, t.deleteConfirm, [
+      { text: t.cancel, onPress: () => {} },
       {
-        text: 'Delete',
+        text: t.delete,
         onPress: () => {
           dispatch(deleteTask(task.id));
           navigation.goBack();
@@ -44,6 +49,26 @@ const TaskDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  const getPriorityTranslation = (prio) => {
+    switch(prio) {
+      case 'High': return t.high;
+      case 'Medium': return t.medium;
+      case 'Low': return t.low;
+      default: return prio;
+    }
+  };
+
+  const getCategoryTranslation = (cat) => {
+    switch(cat) {
+      case 'Work': return t.work;
+      case 'Personal': return t.personal;
+      case 'Shopping': return t.shopping;
+      case 'Health': return t.health;
+      case 'Other': return t.other;
+      default: return cat;
+    }
+  };
+
   const getStatusBadgeStyle = () => ({
     ...styles.statusBadge,
     backgroundColor: task.completed ? '#D4EDDA' : '#FFF4E5',
@@ -57,14 +82,14 @@ const TaskDetailScreen = ({ route, navigation }) => {
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Text style={styles.backButtonText}>← Back</Text>
+        <Text style={styles.backButtonText}>← {t.back}</Text>
       </TouchableOpacity>
 
       <View style={styles.card}>
         {/* Status Badge */}
         <View style={styles.badgeContainer}>
           <Text style={getStatusBadgeStyle()}>
-            {task.completed ? '✓ Completed' : '⏳ Pending'}
+            {task.completed ? `✓ ${t.completed || 'Completed'}` : `⏳ ${t.pending || 'Pending'}`}
           </Text>
         </View>
 
@@ -75,15 +100,15 @@ const TaskDetailScreen = ({ route, navigation }) => {
         {/* Task Info */}
         <View style={styles.infoBox}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📌 Priority:</Text>
+            <Text style={styles.infoLabel}>📌 {t.priority}:</Text>
             <Text style={[styles.infoValue, { color: getPriorityColor(task.priority) }]}>
-              {task.priority}
+              {getPriorityTranslation(task.priority)}
             </Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>🏷️ Category:</Text>
-            <Text style={styles.infoValue}>{task.category}</Text>
+            <Text style={styles.infoLabel}>🏷️ {t.category}:</Text>
+            <Text style={styles.infoValue}>{getCategoryTranslation(task.category)}</Text>
           </View>
         </View>
       </View>
@@ -95,7 +120,7 @@ const TaskDetailScreen = ({ route, navigation }) => {
           onPress={handleToggleComplete}
         >
           <Text style={styles.completeButtonText}>
-            {task.completed ? 'Mark as Pending' : 'Mark as Completed ✓'}
+            {task.completed ? t.markIncomplete : `${t.markComplete} ✓`}
           </Text>
         </TouchableOpacity>
         
@@ -103,7 +128,7 @@ const TaskDetailScreen = ({ route, navigation }) => {
           style={styles.deleteButton}
           onPress={handleDeleteTask}
         >
-          <Text style={styles.deleteButtonText}>Delete Task 🗑️</Text>
+          <Text style={styles.deleteButtonText}>{t.deleteTask} 🗑️</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

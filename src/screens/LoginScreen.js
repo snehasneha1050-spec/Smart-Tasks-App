@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,30 +8,58 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar
+  StatusBar,
+  Animated
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../hooks/useTheme';
+import { loginUser } from '../store/userSlice';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const dispatch = useDispatch();
+
+  // Animation Values
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = useRef(new Animated.Value(30)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslateY = useRef(new Animated.Value(30)).current;
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonTranslateY = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.parallel([
+        Animated.timing(headerOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(headerTranslateY, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(formOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(formTranslateY, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(buttonOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(buttonTranslateY, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      ])
+    ]).start();
+  }, [headerOpacity, headerTranslateY, formOpacity, formTranslateY, buttonOpacity, buttonTranslateY]);
 
   const handleLogin = () => {
-    // Basic static validation using admin/1234
-    if (username === 'admin' && password === '1234') {
-      //Navigates to 'MainTabs' ONLY AFTER you click "OK" on the alert
-      Alert.alert('Success', 'Welcome, Admin! 🎉', [
+    if (username.trim() !== '' && password.trim() !== '') {
+      dispatch(loginUser(username.trim()));
+      Alert.alert('Success', `Welcome, ${username}! 🎉`, [
         {
           text: 'OK',
           onPress: () => navigation.replace('MainTabs')
         }
       ]);
     } else {
-      Alert.alert('Login Failed', 'Invalid credentials. Please use admin / 1234');
+      Alert.alert('Login Failed', 'Please enter a valid username and password.');
     }
   };
 
@@ -45,7 +73,7 @@ const LoginScreen = ({ navigation }) => {
     },
     mainContainer: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       padding: 24,
       justifyContent: 'center',
     },
@@ -152,14 +180,14 @@ const LoginScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
         <View style={styles.mainContainer}>
           {/* Header Section */}
-          <View style={styles.header}>
+          <Animated.View style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}>
             <Text style={styles.logoEmoji}>🗓️</Text>
             <Text style={styles.title}>{t.welcomeBack}</Text>
             <Text style={styles.subtitle}>{t.signInSubtitle}</Text>
-          </View>
+          </Animated.View>
 
           {/* Input Fields Section */}
-          <View style={styles.inputSection}>
+          <Animated.View style={[styles.inputSection, { opacity: formOpacity, transform: [{ translateY: formTranslateY }] }]}>
             
             {/* Username Input Box */}
             <View style={styles.inputWrapper}>
@@ -196,20 +224,22 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.demoContainer}>
               <Text style={styles.demoText}>{t.demoHint}</Text>
             </View>
-          </View>
+          </Animated.View>
 
-          {/* Login Button Section */}
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>{t.login}</Text>
-          </TouchableOpacity>
-
-          {/* Footer Section - Added a link here to navigate to the SignUp page */}
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t.noAccount}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-              <Text style={styles.signUpText}>{t.signUp}</Text>
+          {/* Login Button & Footer Section */}
+          <Animated.View style={{ opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] }}>
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Text style={styles.loginButtonText}>{t.login}</Text>
             </TouchableOpacity>
-          </View>
+
+            {/* Footer Section - Added a link here to navigate to the SignUp page */}
+            <View style={styles.footer}>
+              <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t.noAccount}</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                <Text style={styles.signUpText}>{t.signUp}</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

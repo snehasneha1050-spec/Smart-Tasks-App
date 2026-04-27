@@ -7,6 +7,7 @@ import { useTheme } from '../hooks/useTheme';
 
 const HomeScreen = ({ navigation }) => {
   const tasks = useSelector(state => state.tasks.tasks);
+  const username = useSelector(state => state.user?.username) || 'User';
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [filter, setFilter] = useState('all'); // all, completed, pending
@@ -37,7 +38,7 @@ const HomeScreen = ({ navigation }) => {
   // Sort tasks
   const sortedTasks = [...filteredTasks].sort((a, b) => {
   if (sortBy === 'priority') {
-    const priorityOrder = { high: 3, medium: 2, low: 1 };
+    const priorityOrder = { high: 1, medium: 2, low: 3 };
 
     const aPriority = a.priority?.toLowerCase() || 'low';
     const bPriority = b.priority?.toLowerCase() || 'low';
@@ -87,7 +88,7 @@ const HomeScreen = ({ navigation }) => {
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.greeting}>{t.helloAdmin}</Text>
+            <Text style={styles.greeting}>{t.hello}, {username}! 👋</Text>
             <Text style={styles.subText}>{t.tasks}</Text>
           </View>
         </View>

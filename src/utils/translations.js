@@ -26,7 +26,7 @@ export const translations = {
     settings: 'Settings',
 
     // Home Screen
-    helloAdmin: 'Hello, Admin! 👋',
+    hello: 'Hello',
     tasks: 'Tasks',
     allTasks: 'All Tasks',
     completed: 'Completed',
@@ -95,7 +95,7 @@ export const translations = {
     forgotPassword: 'Forgot Password?',
     noAccount: 'Don\'t have an account?',
     signUp: 'Sign Up',
-    demoHint: 'Demo: admin / 1234',
+    demoHint: 'You can login with any username',
 
     // Sign Up Screen
     createAccount: 'Create Account',
@@ -133,7 +133,7 @@ export const translations = {
     settings: 'सेटिंग्स',
 
     // Home Screen
-    helloAdmin: 'नमस्ते, एडमिन! 👋',
+    hello: 'नमस्ते',
     tasks: 'कार्य',
     allTasks: 'सभी कार्य',
     completed: 'पूर्ण',
@@ -202,7 +202,7 @@ export const translations = {
     forgotPassword: 'पासवर्ड भूल गए?',
     noAccount: 'कोई खाता नहीं है?',
     signUp: 'साइन अप',
-    demoHint: 'डेमो: admin / 1234',
+    demoHint: 'आप किसी भी उपयोगकर्ता नाम से लॉगिन कर सकते हैं',
 
     // Sign Up Screen
     createAccount: 'खाता बनाएं',

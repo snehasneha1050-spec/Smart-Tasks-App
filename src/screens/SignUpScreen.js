@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,29 +8,61 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar
+  StatusBar,
+  Animated
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { CustomAlert as Alert } from '../components/CustomAlert';
+import { useTranslation } from '../hooks/useTranslation';
+import { loginUser } from '../store/userSlice';
 
 const SignUpScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmPassword, setConfirmPasswordState] = useState('');
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+
+  // Animation Values
+  const headerOpacity = useRef(new Animated.Value(0)).current;
+  const headerTranslateY = useRef(new Animated.Value(30)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslateY = useRef(new Animated.Value(30)).current;
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonTranslateY = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.parallel([
+        Animated.timing(headerOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(headerTranslateY, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(formOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(formTranslateY, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      ]),
+      Animated.parallel([
+        Animated.timing(buttonOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(buttonTranslateY, { toValue: 0, tension: 50, friction: 7, useNativeDriver: true })
+      ])
+    ]).start();
+  }, [headerOpacity, headerTranslateY, formOpacity, formTranslateY, buttonOpacity, buttonTranslateY]);
 
   const handleSignUp = () => {
     if (!fullName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(t.error || 'Error', t.fillAllFields || 'Please fill in all fields.');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match!');
+      Alert.alert(t.error || 'Error', t.passwordsNotMatch || 'Passwords do not match!');
       return;
     }
     
-    // Navigate to the Login screen upon successful signup
-    Alert.alert('Success', 'Account Created Successfully! 🎉', [
-      { text: 'OK', onPress: () => navigation.replace('Login') }
+    dispatch(loginUser(fullName.trim()));
+    // Navigate to the MainTabs screen upon successful signup
+    Alert.alert(t.success || 'Success', t.accountCreated || 'Account Created Successfully! 🎉', [
+      { text: t.ok || 'OK', onPress: () => navigation.replace('MainTabs') }
     ]);
   };
 
@@ -44,20 +76,20 @@ const SignUpScreen = ({ navigation }) => {
         <View style={styles.mainContainer}>
           
           {/* Header Section */}
-          <View style={styles.header}>
+          <Animated.View style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}>
             <Text style={styles.logoEmoji}>✨</Text>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Sign up to get started with Smart Tasks.</Text>
-          </View>
+            <Text style={styles.title}>{t.createAccount}</Text>
+            <Text style={styles.subtitle}>{t.signUpSubtitle}</Text>
+          </Animated.View>
 
           {/* Input Fields Section */}
-          <View style={styles.inputSection}>
+          <Animated.View style={[styles.inputSection, { opacity: formOpacity, transform: [{ translateY: formTranslateY }] }]}>
             
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>👤</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Full Name"
+                placeholder={t.fullNamePlaceholder || "Full Name"}
                 value={fullName}
                 onChangeText={setFullName}
                 placeholderTextColor="#A0A0A0"
@@ -68,7 +100,7 @@ const SignUpScreen = ({ navigation }) => {
               <Text style={styles.inputIcon}>✉️</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Email Address"
+                placeholder={t.emailPlaceholder || "Email Address"}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -81,7 +113,7 @@ const SignUpScreen = ({ navigation }) => {
               <Text style={styles.inputIcon}>🔒</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Password"
+                placeholder={t.password}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -93,27 +125,29 @@ const SignUpScreen = ({ navigation }) => {
               <Text style={styles.inputIcon}>🔑</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Confirm Password"
+                placeholder={t.confirmPassword}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={setConfirmPasswordState}
                 secureTextEntry
                 placeholderTextColor="#A0A0A0"
               />
             </View>
-          </View>
+          </Animated.View>
 
-          {/* Sign Up Button */}
-          <TouchableOpacity style={styles.signUpBtn} onPress={handleSignUp}>
-            <Text style={styles.signUpBtnText}>Sign Up</Text>
-          </TouchableOpacity>
-
-          {/* Footer Section */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginText}>Login Here</Text>
+          {/* Sign Up Button & Footer Section */}
+          <Animated.View style={{ opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] }}>
+            <TouchableOpacity style={styles.signUpBtn} onPress={handleSignUp}>
+              <Text style={styles.signUpBtnText}>{t.signUp}</Text>
             </TouchableOpacity>
-          </View>
+
+            {/* Footer Section */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>{t.alreadyHaveAccount} </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.loginText}>{t.login}</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
 
         </View>
       </ScrollView>

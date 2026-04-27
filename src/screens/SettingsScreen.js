@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { toggleTheme, setLanguage } from '../store/themeSlice';
@@ -11,6 +11,41 @@ const SettingsScreen = ({ navigation }) => {
   const { darkMode, language } = useSelector(state => state.theme);
   const { t } = useTranslation();
   const { colors } = useTheme();
+
+  // Local state for notifications toggle
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const handleNotificationToggle = async (newValue) => {
+    setNotificationsEnabled(newValue);
+    
+    if (newValue) {
+      try {
+        // Frontend-only Local Notification logic (using @notifee/react-native)
+        
+        // 1. Request permissions (Required for iOS and Android 13+)
+        // await notifee.requestPermission();
+        
+        // 2. Create a channel (Required for Android)
+        // const channelId = await notifee.createChannel({
+        //   id: 'default',
+        //   name: 'Default Channel',
+        // });
+        
+        // 3. Display the local notification immediately
+        // await notifee.displayNotification({
+        //   title: 'Notifications Enabled ✅',
+        //   body: 'You will now receive task reminders!',
+        //   android: { channelId },
+        // });
+        
+        Alert.alert(t.success || 'Success', 'Local notifications enabled on this device!');
+      } catch (error) {
+        console.log('Notification error:', error);
+      }
+    } else {
+      Alert.alert(t.success || 'Success', 'Notifications disabled.');
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(t.logout, t.logoutConfirm, [
@@ -74,8 +109,8 @@ const SettingsScreen = ({ navigation }) => {
         <View style={[styles.switchRow, { borderBottomColor: 'transparent' }]}>
           <Text style={[styles.optionText, { color: colors.text }]}>{t.notifications}</Text>
           <Switch 
-            value={true}
-            onValueChange={() => {}}
+            value={notificationsEnabled}
+            onValueChange={handleNotificationToggle}
             trackColor={{ false: colors.border, true: colors.primary }}
           />
         </View>

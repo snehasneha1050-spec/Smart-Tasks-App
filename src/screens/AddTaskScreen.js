@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -12,24 +12,47 @@ import {
 import { useDispatch } from 'react-redux';
 import { addTask } from '../store/taskSlice';
 import { CustomAlert as Alert } from '../components/CustomAlert';
+import { useTranslation } from '../hooks/useTranslation';
+
+const CATEGORIES = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
+const PRIORITIES = ['High', 'Medium', 'Low'];
 
 const AddTaskScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [category, setCategory] = useState('Work');
   const [priority, setPriority] = useState('Medium');
   const [loading, setLoading] = useState(false);
 
-  const categories = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
+  const getCategoryTranslation = useCallback((cat) => {
+    switch(cat) {
+      case 'Work': return t.work;
+      case 'Personal': return t.personal;
+      case 'Shopping': return t.shopping;
+      case 'Health': return t.health;
+      case 'Other': return t.other;
+      default: return cat;
+    }
+  }, [t]);
 
-  const handleSaveTask = () => {
+  const getPriorityTranslation = useCallback((prio) => {
+    switch(prio) {
+      case 'High': return t.high;
+      case 'Medium': return t.medium;
+      case 'Low': return t.low;
+      default: return prio;
+    }
+  }, [t]);
+
+  const handleSaveTask = useCallback(() => {
     if (!taskTitle.trim()) {
-      Alert.alert('Error', 'Please enter a task title');
+      Alert.alert(t.error || 'Error', t.enterTaskTitle || 'Please enter a task title');
       return;
     }
     if (!taskDescription.trim()) {
-      Alert.alert('Error', 'Please enter a task description');
+      Alert.alert(t.error || 'Error', t.enterTaskDesc || 'Please enter a task description');
       return;
     }
     
@@ -42,22 +65,21 @@ const AddTaskScreen = ({ navigation }) => {
       category: category,
       priority: priority,
       completed: false,
-       // ✅ Added createdAt for date sorting
-    createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     
     dispatch(addTask(newTask));
     
     setTimeout(() => {
       setLoading(false);
-      Alert.alert('Success', 'Task added successfully! 🎉', [
+      Alert.alert(t.success || 'Success', t.taskAddedSuccess || 'Task added successfully! 🎉', [
         {
-          text: 'OK',
+          text: t.ok || 'OK',
           onPress: () => navigation.goBack()
         }
       ]);
     }, 500);
-  };
+  }, [taskTitle, taskDescription, category, priority, t, dispatch, navigation]);
 
   return (
     <KeyboardAvoidingView 
@@ -68,16 +90,16 @@ const AddTaskScreen = ({ navigation }) => {
         
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📝 Add New Task</Text>
-          <Text style={styles.subText}>Create a new assignment or task</Text>
+          <Text style={styles.headerTitle}>📝 {t.addNewTask}</Text>
+          <Text style={styles.subText}>{t.taskDetails || 'Create a new assignment or task'}</Text>
         </View>
 
         {/* Task Title Input */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Task Title</Text>
+          <Text style={styles.label}>{t.taskTitle}</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Complete UI Design"
+            placeholder={t.taskTitlePlaceholder || "e.g., Complete UI Design"}
             value={taskTitle}
             onChangeText={setTaskTitle}
             placeholderTextColor="#A0A0A0"
@@ -86,10 +108,10 @@ const AddTaskScreen = ({ navigation }) => {
 
         {/* Task Description Input */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t.taskDescription}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Enter task details..."
+            placeholder={t.taskDescPlaceholder || "Enter task details..."}
             value={taskDescription}
             onChangeText={setTaskDescription}
             multiline={true}
@@ -101,9 +123,9 @@ const AddTaskScreen = ({ navigation }) => {
 
         {/* Category Selection */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>{t.category}</Text>
           <View style={styles.categoryContainer}>
-            {categories.map((cat) => (
+            {CATEGORIES.map((cat) => (
               <TouchableOpacity
                 key={cat}
                 style={[
@@ -116,7 +138,7 @@ const AddTaskScreen = ({ navigation }) => {
                   styles.categoryText,
                   category === cat && styles.selectedCategoryText
                 ]}>
-                  {cat}
+                  {getCategoryTranslation(cat)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -125,9 +147,9 @@ const AddTaskScreen = ({ navigation }) => {
 
         {/* Priority Selection */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Priority Level</Text>
+          <Text style={styles.label}>{t.taskPriority}</Text>
           <View style={styles.priorityContainer}>
-            {['High', 'Medium', 'Low'].map((level) => (
+            {PRIORITIES.map((level) => (
               <TouchableOpacity
                 key={level}
                 style={[
@@ -140,7 +162,7 @@ const AddTaskScreen = ({ navigation }) => {
                   styles.priorityText,
                   priority === level && styles.selectedPriorityText
                 ]}>
-                  {level}
+                  {getPriorityTranslation(level)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -153,14 +175,14 @@ const AddTaskScreen = ({ navigation }) => {
           onPress={handleSaveTask}
           disabled={loading}
         >
-          <Text style={styles.saveButtonText}>{loading ? 'Saving...' : 'Save Task'}</Text>
+          <Text style={styles.saveButtonText}>{loading ? t.loading || 'Saving...' : t.save}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t.cancel}</Text>
         </TouchableOpacity>
 
       </ScrollView>
