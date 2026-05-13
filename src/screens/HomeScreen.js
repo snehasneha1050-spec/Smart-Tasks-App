@@ -1,15 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import TaskCard from '../components/TaskCard';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../hooks/useTheme';
+import { deleteTask } from '../store/taskSlice';
+import { CustomAlert as Alert } from '../components/CustomAlert';
 
 const HomeScreen = ({ navigation }) => {
   const tasks = useSelector(state => state.tasks.tasks);
-  const username = useSelector(state => state.user?.username) || 'User';
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const dispatch = useDispatch();
+  
+  // Get current language to know when to translate unknown names
+  const language = useSelector(state => state.theme?.language);
+  const rawUsername = useSelector(state => state.user?.username);
+
+  // Simple phonetic transliteration for unknown names
+  const transliterateToHindi = (text) => {
+    if (!text) return '';
+    const rules = [
+      [/sh/g, 'श'], [/ch/g, 'च'], [/th/g, 'थ'], [/ph/g, 'फ'], [/gh/g, 'घ'], [/dh/g, 'ध'], [/bh/g, 'भ'],
+      [/a/g, 'ा'], [/e/g, 'े'], [/i/g, 'ि'], [/o/g, 'ो'], [/u/g, 'ु'],
+      [/b/g, 'ब'], [/c/g, 'क'], [/d/g, 'द'], [/f/g, 'फ'], [/g/g, 'ग'], [/h/g, 'ह'], [/j/g, 'ज'],
+      [/k/g, 'क'], [/l/g, 'ल'], [/m/g, 'म'], [/n/g, 'न'], [/p/g, 'प'], [/q/g, 'क'], [/r/g, 'र'],
+      [/s/g, 'स'], [/t/g, 'त'], [/v/g, 'व'], [/w/g, 'व'], [/x/g, 'क्स'], [/y/g, 'य'], [/z/g, 'ज़']
+    ];
+    let hindiText = text.toLowerCase();
+    rules.forEach(([eng, hin]) => { hindiText = hindiText.replace(eng, hin); });
+    
+    // Fix starting vowels
+    const startVowels = { 'ा': 'आ', 'े': 'ए', 'ि': 'इ', 'ो': 'ओ', 'ु': 'उ' };
+    if (startVowels[hindiText.charAt(0)]) hindiText = startVowels[hindiText.charAt(0)] + hindiText.slice(1);
+    return hindiText;
+  };
+
+  let username = t.user || 'User';
+  if (rawUsername) {
+    if (t.names && t.names[rawUsername.toLowerCase()]) username = t.names[rawUsername.toLowerCase()];
+    else if (language === 'Hindi') username = transliterateToHindi(rawUsername);
+    else username = rawUsername;
+  }
+
   const [filter, setFilter] = useState('all'); // all, completed, pending
   const [sortBy, setSortBy] = useState('priority'); // priority, date, title
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -24,42 +57,66 @@ const HomeScreen = ({ navigation }) => {
   }, [fadeAnim]);
 
   // Calculate task statistics
-  const completedCount = tasks.filter(task => task.completed).length;
-  const pendingCount = tasks.filter(task => !task.completed).length;
-  const completionPercentage = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+  const completedCount = useMemo(() => tasks.filter(task => task.completed).length, [tasks]);
+  const pendingCount = useMemo(() => tasks.filter(task => !task.completed).length, [tasks]);
+  const completionPercentage = useMemo(() => tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0, [tasks.length, completedCount]);
 
   // Filter tasks based on selected filter
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = useMemo(() => tasks.filter(task => {
     if (filter === 'completed') return task.completed;
     if (filter === 'pending') return !task.completed;
     return true;
-  });
+  }), [tasks, filter]);
 
   // Sort tasks
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
-  if (sortBy === 'priority') {
-    const priorityOrder = { high: 1, medium: 2, low: 3 };
+  const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
+    if (sortBy === 'priority') {
+      const priorityOrder = { high: 1, medium: 2, low: 3 };
+      const aPriority = a.priority?.toLowerCase() || 'low';
+      const bPriority = b.priority?.toLowerCase() || 'low';
+      return priorityOrder[aPriority] - priorityOrder[bPriority];
+    }
+    //Title sorting 
+    if (sortBy === 'title') {
+      return a.title.localeCompare(b.title);
+    }
+    // ✅ Date sorting (latest first)
+    if (sortBy === 'date') {
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    }
+    return 0;
+  }), [filteredTasks, sortBy]);
 
-    const aPriority = a.priority?.toLowerCase() || 'low';
-    const bPriority = b.priority?.toLowerCase() || 'low';
+  // Convert tasks to Hindi characters if language is Hindi
+  const displayTasks = useMemo(() => {
+    if (language !== 'Hindi') return sortedTasks;
+    return sortedTasks.map(task => ({
+      ...task,
+      title: transliterateToHindi(task.title),
+      description: transliterateToHindi(task.description)
+    }));
+  }, [sortedTasks, language]);
 
-    return priorityOrder[aPriority] - priorityOrder[bPriority];
-  }
-//Title sorting 
-  if (sortBy === 'title') {
-    return a.title.localeCompare(b.title);
-  }
-   // ✅ Date sorting (latest first)
-  if (sortBy === 'date') {
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  }
-
-  return 0;
-});
-
-  const handleTaskPress = (task) => {
+  const handleTaskPress = useCallback((task) => {
     navigation.navigate('TaskDetail', { task });
-  };
+  }, [navigation]);
+
+  // New handler for editing
+  const handleEditTask = useCallback((task) => {
+    navigation.navigate('EditTask', { task });
+  }, [navigation]);
+
+  // New handler for deleting with confirmation
+  const handleDeleteTask = useCallback((taskId) => {
+    Alert.alert(t.deleteTask || 'Delete Task', t.deleteConfirm || 'Are you sure you want to delete this task?', [
+      { text: t.cancel || 'Cancel', style: 'cancel' },
+      {
+        text: t.delete || 'Delete',
+        onPress: () => dispatch(deleteTask(taskId)),
+        style: 'destructive'
+      }
+    ]);
+  }, [t, dispatch]);
 
   const renderFilterButton = (filterType, label) => (
     <TouchableOpacity
@@ -89,7 +146,9 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.greeting}>{t.hello}, {username}! 👋</Text>
-            <Text style={styles.subText}>{t.tasks}</Text>
+            <Text style={styles.subText}>
+              {t.tasks} • 🏆 {completedCount * 10} {t.points || 'Points'}
+            </Text>
           </View>
         </View>
       </View>
@@ -146,12 +205,14 @@ const HomeScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {sortedTasks.length > 0 ? (
-          sortedTasks.map((task) => (
+        {displayTasks.length > 0 ? (
+          displayTasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
               onPress={() => handleTaskPress(task)}
+              onEdit={() => handleEditTask(task)}
+              onDelete={() => handleDeleteTask(task.id)}
             />
           ))
         ) : (

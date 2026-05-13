@@ -1,10 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { dummyTasks } from '../data/dummyTasks';
+import { logoutUser } from './userSlice';
 
 const taskSlice = createSlice({
   name: 'tasks',
   initialState: {
-    tasks: dummyTasks,
+    tasks: [], // Start with an empty list. Tasks will be loaded per user.
   },
   reducers: {
     addTask: (state, action) => {
@@ -28,6 +28,11 @@ const taskSlice = createSlice({
     loadTasks: (state, action) => {
       state.tasks = action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logoutUser, (state) => {
+      state.tasks = []; // Reset tasks to an empty array on user logout
+    });
   },
 });
 

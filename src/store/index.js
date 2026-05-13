@@ -2,7 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import userReducer from './userSlice';
 import taskReducer from './taskSlice';
 import themeReducer from './themeSlice';
-import { saveTasks } from '../utils/storage';
+import { saveUserTasks } from '../utils/storage';
 
 export const store = configureStore({
   reducer: {
@@ -12,8 +12,10 @@ export const store = configureStore({
   },
 });
 
-// Save tasks to AsyncStorage whenever they change
+// Save tasks to AsyncStorage for the logged-in user whenever tasks change
 store.subscribe(() => {
   const state = store.getState();
-  saveTasks(state.tasks.tasks);
+  if (state.user.isLoggedIn && state.user.username) {
+    saveUserTasks(state.user.username, state.tasks.tasks);
+  }
 });

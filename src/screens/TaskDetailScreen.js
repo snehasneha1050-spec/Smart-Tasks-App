@@ -4,26 +4,56 @@ import { useDispatch, useSelector } from 'react-redux';
 import { toggleComplete, deleteTask } from '../store/taskSlice';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../hooks/useTheme';
 
 const TaskDetailScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const passedTask = route.params?.task;
+
+  const language = useSelector(state => state.theme?.language);
+
+  const transliterateToHindi = (text) => {
+    if (!text) return '';
+    const rules = [
+      [/sh/g, 'श'], [/ch/g, 'च'], [/th/g, 'थ'], [/ph/g, 'फ'], [/gh/g, 'घ'], [/dh/g, 'ध'], [/bh/g, 'भ'],
+      [/a/g, 'ा'], [/e/g, 'े'], [/i/g, 'ि'], [/o/g, 'ो'], [/u/g, 'ु'],
+      [/b/g, 'ब'], [/c/g, 'क'], [/d/g, 'द'], [/f/g, 'फ'], [/g/g, 'ग'], [/h/g, 'ह'], [/j/g, 'ज'],
+      [/k/g, 'क'], [/l/g, 'ल'], [/m/g, 'म'], [/n/g, 'न'], [/p/g, 'प'], [/q/g, 'क'], [/r/g, 'र'],
+      [/s/g, 'स'], [/t/g, 'त'], [/v/g, 'व'], [/w/g, 'व'], [/x/g, 'क्स'], [/y/g, 'य'], [/z/g, 'ज़']
+    ];
+    let hindiText = text.toLowerCase();
+    rules.forEach(([eng, hin]) => { hindiText = hindiText.replace(eng, hin); });
+    const startVowels = { 'ा': 'आ', 'े': 'ए', 'ि': 'इ', 'ो': 'ओ', 'ु': 'उ' };
+    if (startVowels[hindiText.charAt(0)]) hindiText = startVowels[hindiText.charAt(0)] + hindiText.slice(1);
+    return hindiText;
+  };
 
   // Fetch the latest task details from Redux store so UI updates immediately
   const task = useSelector(state => state.tasks.tasks.find(t => t.id === passedTask?.id));
 
   if (!task) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>{t.taskNotFound || 'Task not found'}</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.error }]}>{t.taskNotFound || 'Task not found'}</Text>
       </View>
     );
   }
 
   const handleToggleComplete = () => {
     dispatch(toggleComplete(task.id));
-    Alert.alert(t.success || 'Success', task.completed ? (t.taskMarkedPending || 'Task marked as pending!') : (t.taskMarkedCompleted || 'Task marked as completed! 🎉'));
+    const pointsMessage = !task.completed ? `\n\n🏆 ${t.youEarnedPoints || 'You earned 10 points!'}` : '';
+    Alert.alert(
+      t.success || 'Success', 
+      task.completed 
+        ? (t.taskMarkedPending || 'Task marked as pending!') 
+        : ((t.taskMarkedCompleted || 'Task marked as completed! 🎉') + pointsMessage)
+    );
+  };
+
+  const handleEditTask = () => {
+    navigation.navigate('EditTask', { task });
   };
 
   const handleDeleteTask = () => {
@@ -42,9 +72,9 @@ const TaskDetailScreen = ({ route, navigation }) => {
 
   const getPriorityColor = (priority) => {
     switch(priority) {
-      case 'High': return '#E53935';
-      case 'Medium': return '#FF9800';
-      case 'Low': return '#4CAF50';
+      case 'High': return '#4CAF50';
+      case 'Medium': return '#FFC107';
+      case 'Low': return '#FF5252';
       default: return '#666';
     }
   };
@@ -71,21 +101,21 @@ const TaskDetailScreen = ({ route, navigation }) => {
 
   const getStatusBadgeStyle = () => ({
     ...styles.statusBadge,
-    backgroundColor: task.completed ? '#D4EDDA' : '#FFF4E5',
-    color: task.completed ? '#155724' : '#FF9800'
+    backgroundColor: task.completed ? colors.success + '20' : colors.error + '20', // '20' adds 12% opacity to hex
+    color: task.completed ? colors.success : colors.error
   });
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Back Button */}
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Text style={styles.backButtonText}>← {t.back}</Text>
+        <Text style={[styles.backButtonText, { color: colors.primary }]}>← {t.back}</Text>
       </TouchableOpacity>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
         {/* Status Badge */}
         <View style={styles.badgeContainer}>
           <Text style={getStatusBadgeStyle()}>
@@ -94,21 +124,21 @@ const TaskDetailScreen = ({ route, navigation }) => {
         </View>
 
         {/* Task Title */}
-        <Text style={styles.title}>{task.title}</Text>
-        <Text style={styles.description}>{task.description}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{language === 'Hindi' ? transliterateToHindi(task.title) : task.title}</Text>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>{language === 'Hindi' ? transliterateToHindi(task.description) : task.description}</Text>
         
         {/* Task Info */}
-        <View style={styles.infoBox}>
+        <View style={[styles.infoBox, { backgroundColor: colors.background }]}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📌 {t.priority}:</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>📌 {t.priority}:</Text>
             <Text style={[styles.infoValue, { color: getPriorityColor(task.priority) }]}>
               {getPriorityTranslation(task.priority)}
             </Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>🏷️ {t.category}:</Text>
-            <Text style={styles.infoValue}>{getCategoryTranslation(task.category)}</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>🏷️ {t.category}:</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{getCategoryTranslation(task.category)}</Text>
           </View>
         </View>
       </View>
@@ -122,6 +152,13 @@ const TaskDetailScreen = ({ route, navigation }) => {
           <Text style={styles.completeButtonText}>
             {task.completed ? t.markIncomplete : `${t.markComplete} ✓`}
           </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.editButton}
+          onPress={handleEditTask}
+        >
+          <Text style={styles.editButtonText}>{t.edit || 'Edit Task'} ✏️</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -152,6 +189,8 @@ const styles = StyleSheet.create({
   completeButton: { backgroundColor: '#4CAF50', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 12, elevation: 2 },
   completeButtonReverse: { backgroundColor: '#FF9800' },
   completeButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
+  editButton: { backgroundColor: '#2196F3', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 12, elevation: 2 },
+  editButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   deleteButton: { backgroundColor: '#FF3B30', padding: 16, borderRadius: 12, alignItems: 'center', elevation: 2 },
   deleteButtonText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   errorText: { fontSize: 18, color: '#E53935', textAlign: 'center', marginTop: 20 },

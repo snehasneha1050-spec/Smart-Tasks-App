@@ -6,6 +6,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import AddTaskScreen from '../screens/AddTaskScreen';
 import TaskDetailScreen from '../screens/TaskDetailScreen';
+import EditTaskScreen from '../screens/EditTaskScreen';
 import TabNavigator from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
@@ -22,6 +23,7 @@ const AppNavigator = () => {
       
       <Stack.Screen name="AddTask" component={AddTaskScreen} />
       <Stack.Screen name="TaskDetail" component={TaskDetailScreen} />
+      <Stack.Screen name="EditTask" component={EditTaskScreen} />
     </Stack.Navigator>
   );
 };

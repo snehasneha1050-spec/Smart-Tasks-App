@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useTranslation } from '../hooks/useTranslation';
@@ -9,18 +9,20 @@ const ProfileScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
-  const completedCount = tasks.filter(t => t.completed).length;
-  const pendingCount = tasks.filter(t => !t.completed).length;
+  const completedCount = useMemo(() => tasks.filter(task => task.completed).length, [tasks]);
+  const pendingCount = useMemo(() => tasks.filter(task => !task.completed).length, [tasks]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Profile Header */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.avatarPlaceholder}>
-          <Text style={styles.avatarText}>📌</Text>
+          <Text style={styles.avatarText}>🏆</Text>
         </View>
         <Text style={styles.name}>{t.appName}</Text>
-        <Text style={styles.role}>{t.taskManagement}</Text>
+        <Text style={styles.role}>
+          {completedCount * 10} {t.pointsEarned || 'Points Earned'}
+        </Text>
       </View>
 
       {/* Stats Section */}

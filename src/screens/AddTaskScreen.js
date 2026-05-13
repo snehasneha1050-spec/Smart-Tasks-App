@@ -13,6 +13,9 @@ import { useDispatch } from 'react-redux';
 import { addTask } from '../store/taskSlice';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { useTranslation } from '../hooks/useTranslation';
+import { useTheme } from '../hooks/useTheme';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import notifee, { TriggerType, RepeatFrequency } from '@notifee/react-native';
 
 const CATEGORIES = ['Work', 'Personal', 'Shopping', 'Health', 'Other'];
 const PRIORITIES = ['High', 'Medium', 'Low'];
@@ -20,11 +23,16 @@ const PRIORITIES = ['High', 'Medium', 'Low'];
 const AddTaskScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [category, setCategory] = useState('Work');
   const [priority, setPriority] = useState('Medium');
   const [loading, setLoading] = useState(false);
+
+  const [dueDate, setDueDate] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
+  const [isReminderSet, setIsReminderSet] = useState(false);
 
   const getCategoryTranslation = useCallback((cat) => {
     switch(cat) {
@@ -46,7 +54,7 @@ const AddTaskScreen = ({ navigation }) => {
     }
   }, [t]);
 
-  const handleSaveTask = useCallback(() => {
+  const handleSaveTask = useCallback(async () => {
     if (!taskTitle.trim()) {
       Alert.alert(t.error || 'Error', t.enterTaskTitle || 'Please enter a task title');
       return;
@@ -66,8 +74,43 @@ const AddTaskScreen = ({ navigation }) => {
       priority: priority,
       completed: false,
       createdAt: new Date().toISOString(),
+      dueDate: isReminderSet ? dueDate.toISOString() : null,
+      isDaily: isReminderSet, // Automatically daily if reminder is set
     };
     
+    // Schedule Local Notification if reminder is set
+    if (isReminderSet && dueDate > new Date()) {
+      try {
+        await notifee.requestPermission();
+        
+        // Create a new channel with a custom sound
+        const channelId = await notifee.createChannel({ 
+          id: 'task-reminders-alarm', 
+          name: 'Task Reminders Alarm',
+          sound: 'alarm', // Extensions like .mp3 are not needed for Android
+        });
+        
+        const trigger = {
+          type: TriggerType.TIMESTAMP,
+          timestamp: dueDate.getTime(),
+          repeatFrequency: RepeatFrequency.DAILY // 👈 Always repeat daily
+        };
+
+        await notifee.createTriggerNotification(
+          {
+            title: '⏰ Task Reminder',
+            body: `It's time to complete: ${taskTitle}`,
+            android: { channelId },
+            ios: { sound: 'alarm.mp3' }, // Extension is mandatory for iOS
+            data: { task: newTask }, // 👈 Passing this data to open the app
+          },
+          trigger
+        );
+      } catch (error) {
+        console.log('Notification error:', error);
+      }
+    }
+
     dispatch(addTask(newTask));
     
     setTimeout(() => {
@@ -79,57 +122,86 @@ const AddTaskScreen = ({ navigation }) => {
         }
       ]);
     }, 500);
-  }, [taskTitle, taskDescription, category, priority, t, dispatch, navigation]);
+  }, [taskTitle, taskDescription, category, priority, isReminderSet, dueDate, t, dispatch, navigation]);
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container} 
+      style={[styles.container, { backgroundColor: colors.background }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>📝 {t.addNewTask}</Text>
-          <Text style={styles.subText}>{t.taskDetails || 'Create a new assignment or task'}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>📝 {t.addNewTask}</Text>
+          <Text style={[styles.subText, { color: colors.textSecondary }]}>{t.taskDetails || 'Create a new assignment or task'}</Text>
         </View>
 
         {/* Task Title Input */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t.taskTitle}</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.taskTitle}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.text, borderColor: colors.border }]}
             placeholder={t.taskTitlePlaceholder || "e.g., Complete UI Design"}
             value={taskTitle}
             onChangeText={setTaskTitle}
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={colors.textSecondary}
           />
         </View>
 
         {/* Task Description Input */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t.taskDescription}</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.taskDescription}</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, color: colors.text, borderColor: colors.border }]}
             placeholder={t.taskDescPlaceholder || "Enter task details..."}
             value={taskDescription}
             onChangeText={setTaskDescription}
             multiline={true}
             numberOfLines={4}
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={colors.textSecondary}
             textAlignVertical="top"
           />
         </View>
 
+      {/* Due Date & Time Picker */}
+      <View style={styles.inputGroup}>
+        <Text style={[styles.label, { color: colors.text }]}>⏰ {t.dueDate || 'Reminder Time'}</Text>
+        <TouchableOpacity 
+          style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, justifyContent: 'center' }]}
+          onPress={() => setShowPicker(true)}
+        >
+          <Text style={{ color: isReminderSet ? colors.text : colors.textSecondary }}>
+            {isReminderSet ? dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : (t.selectDate || 'Select Time')}
+          </Text>
+        </TouchableOpacity>
+        
+        {showPicker && (
+          <DateTimePicker
+            value={dueDate}
+            mode="time"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowPicker(false);
+              if (event.type !== 'dismissed' && selectedDate) {
+                setDueDate(selectedDate);
+                setIsReminderSet(true);
+              }
+            }}
+          />
+        )}
+      </View>
+
         {/* Category Selection */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t.category}</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.category}</Text>
           <View style={styles.categoryContainer}>
             {CATEGORIES.map((cat) => (
               <TouchableOpacity
                 key={cat}
                 style={[
                   styles.categoryButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.primary },
                   category === cat && styles.selectedCategory
                 ]}
                 onPress={() => setCategory(cat)}
@@ -138,7 +210,7 @@ const AddTaskScreen = ({ navigation }) => {
                   styles.categoryText,
                   category === cat && styles.selectedCategoryText
                 ]}>
-                  {getCategoryTranslation(cat)}
+              {getCategoryTranslation(cat)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -147,13 +219,14 @@ const AddTaskScreen = ({ navigation }) => {
 
         {/* Priority Selection */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>{t.taskPriority}</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t.taskPriority}</Text>
           <View style={styles.priorityContainer}>
             {PRIORITIES.map((level) => (
               <TouchableOpacity
                 key={level}
                 style={[
                   styles.priorityButton,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.primary },
                   priority === level && styles.selectedPriority
                 ]}
                 onPress={() => setPriority(level)}

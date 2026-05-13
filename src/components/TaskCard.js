@@ -1,39 +1,94 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const TaskCard = ({ task, onPress }) => {
+const TaskCard = ({ task, onPress, onEdit, onDelete }) => {
+  
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'High': return '#FF5252';
+      case 'Medium': return '#FFC107';
+      case 'Low': return '#4CAF50';
+      default: return '#666';
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>{task.title}</Text>
-        <Text style={[styles.priority, task.priority === 'High' ? styles.high : styles.medium]}>
-          {task.priority}
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+      
+      {/* Task Details Section */}
+      <View style={styles.taskInfo}>
+        <Text style={[styles.title, task.completed && styles.completedTitle]}>
+          {task.title}
+        </Text>
+        <Text style={styles.category} numberOfLines={1}>
+        {task.category} • <Text style={{ color: getPriorityColor(task.priority), fontWeight: 'bold' }}>{task.priority}</Text> • <Text style={{ color: task.completed ? '#4CAF50' : '#FF9800', fontWeight: 'bold' }}>{task.completed ? 'Completed' : 'Pending'}</Text>
+        {task.dueDate && ` • ⏰ ${new Date(task.dueDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}
         </Text>
       </View>
-      <Text style={styles.description} numberOfLines={2}>{task.description}</Text>
-      <View style={styles.footerRow}>
-        <Text style={styles.category}>{task.category}</Text>
-        <Text style={[styles.status, task.completed ? styles.statusCompleted : styles.statusPending]}>
-          {task.completed ? '✓ Completed' : '⏳ Pending'}
-        </Text>
+
+      {/* Action Buttons Section (Edit & Delete) */}
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity style={styles.iconButton} onPress={onEdit}>
+          <Text style={styles.iconText}>✏️</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={[styles.iconButton, styles.deleteButton]} onPress={onDelete}>
+          <Text style={styles.iconText}>🗑️</Text>
+        </TouchableOpacity>
       </View>
+
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: '#FFF', padding: 15, borderRadius: 10, marginVertical: 8, marginHorizontal: 15, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#333', flex: 1 },
-  priority: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5, fontSize: 12, fontWeight: 'bold', color: '#FFF', overflow: 'hidden' },
-  high: { backgroundColor: '#FF5252' },
-  medium: { backgroundColor: '#FFC107' },
-  description: { fontSize: 14, color: '#666', marginBottom: 10 },
-  category: { fontSize: 12, color: '#6200EA', fontWeight: 'bold' },
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  status: { fontSize: 12, fontWeight: 'bold' },
-  statusCompleted: { color: '#4CAF50' },
-  statusPending: { color: '#FF9800' }
+  card: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  taskInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  completedTitle: {
+    color: '#999',
+  },
+  category: {
+    fontSize: 12,
+    color: '#666',
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    padding: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+  },
+  deleteButton: {
+    backgroundColor: '#FEE2E2', // Light red background for delete button
+  },
+  iconText: {
+    fontSize: 16,
+  },
 });
 
 export default TaskCard;

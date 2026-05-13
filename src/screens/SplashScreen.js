@@ -1,9 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch } from 'react-redux';
+import { loginUser } from '../store/userSlice';
+import { loadTasks } from '../store/taskSlice';
+import { loadUserTasks } from '../utils/storage';
+import notifee from '@notifee/react-native';
 
 const SplashScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
+  const dispatch = useDispatch();
 
   useEffect(() => {
     // Start Logo Animations
@@ -20,13 +27,39 @@ const SplashScreen = ({ navigation }) => {
       })
     ]).start();
 
-    // Timer to automatically navigate to the Login screen after 2.5 seconds
-    const timer = setTimeout(() => {
-      navigation.replace('Login'); 
-    }, 2500);
+    // Check if user is already logged in
+    const checkLoginStatus = async () => {
+      try {
+        const loggedInUser = await AsyncStorage.getItem('loggedInUser');
+        
+        setTimeout(async () => {
+          if (loggedInUser) {
+            const userTasks = await loadUserTasks(loggedInUser);
+            dispatch(loadTasks(userTasks));
+            dispatch(loginUser(loggedInUser));
+            
+            // If the app is opened via a notification when completely closed...
+            const initialNotification = await notifee.getInitialNotification();
+            const taskFromNotification = initialNotification?.notification?.data?.task;
 
-    return () => clearTimeout(timer);
-  }, [navigation, fadeAnim, scaleAnim]);
+            navigation.replace('MainTabs'); // Navigate to the Home page first
+            
+            // If there is notification data, navigate to that task's details
+            if (taskFromNotification) {
+              setTimeout(() => navigation.navigate('TaskDetail', { task: taskFromNotification }), 100);
+            }
+          } else {
+            navigation.replace('Login');
+          }
+        }, 2000); // 2 seconds delay to show Splash Screen
+      } catch (error) {
+        console.error('Auto-login check failed:', error);
+        navigation.replace('Login');
+      }
+    };
+
+    checkLoginStatus();
+  }, [navigation, fadeAnim, scaleAnim, dispatch]);
 
   return (
     <View style={styles.container}>

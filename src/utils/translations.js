@@ -18,6 +18,7 @@ export const translations = {
     next: 'Next',
     done: 'Done',
     loading: 'Loading...',
+    user: 'User',
 
     // Navigation
     home: 'Home',
@@ -42,6 +43,9 @@ export const translations = {
     completedTasks: 'Completed',
     pendingTasks: 'Pending',
     completionRate: 'Completion Rate',
+    points: 'Points',
+    pointsEarned: 'Points Earned',
+    youEarnedPoints: 'You earned 10 points!',
 
     // Add Task Screen
     addNewTask: 'Add New Task',
@@ -105,6 +109,15 @@ export const translations = {
 
     // Splash Screen
     loadingApp: 'Loading your tasks...',
+    
+    // Known Usernames (For Demo)
+    names: {
+      admin: 'Admin',
+      sneha: 'Sneha',
+      user: 'User',
+      test: 'Test',
+      demo: 'Demo'
+    }
   },
   hi: {
     // Common
@@ -125,6 +138,7 @@ export const translations = {
     next: 'अगला',
     done: 'हो गया',
     loading: 'लोड हो रहा है...',
+    user: 'उपयोगकर्ता',
 
     // Navigation
     home: 'होम',
@@ -149,6 +163,9 @@ export const translations = {
     completedTasks: 'पूर्ण कार्य',
     pendingTasks: 'अपूर्ण कार्य',
     completionRate: 'पूर्णता दर',
+    points: 'अंक',
+    pointsEarned: 'अंक अर्जित किए',
+    youEarnedPoints: 'आपने 10 अंक अर्जित किए!',
 
     // Add Task Screen
     addNewTask: 'नया कार्य जोड़ें',
@@ -212,6 +229,15 @@ export const translations = {
 
     // Splash Screen
     loadingApp: 'आपके कार्य लोड हो रहे हैं...',
+
+    // Known Usernames (For Demo)
+    names: {
+      admin: 'एडमिन',
+      sneha: 'स्नेहा',
+      user: 'उपयोगकर्ता',
+      test: 'टेस्ट',
+      demo: 'डेमो'
+    },
   },
 };
 

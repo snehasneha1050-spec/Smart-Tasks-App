@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { toggleTheme, setLanguage } from '../store/themeSlice';
 import { useTranslation } from '../hooks/useTranslation';
+import { logoutUser } from '../store/userSlice';
 import { useTheme } from '../hooks/useTheme';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 
@@ -52,7 +54,11 @@ const SettingsScreen = ({ navigation }) => {
       { text: t.cancel, onPress: () => {} },
       {
         text: t.logout,
-        onPress: () => navigation.replace('Login'),
+        onPress: async () => {
+          await AsyncStorage.removeItem('loggedInUser'); // Clear login session
+          dispatch(logoutUser());
+          navigation.replace('Login');
+        },
         style: 'destructive'
       }
     ]);

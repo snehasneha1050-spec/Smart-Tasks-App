@@ -11,10 +11,13 @@ import {
   StatusBar,
   Animated
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { useTranslation } from '../hooks/useTranslation';
 import { loginUser } from '../store/userSlice';
+import { loadTasks } from '../store/taskSlice';
+import { loadUserTasks } from '../utils/storage';
 
 const SignUpScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
@@ -49,7 +52,7 @@ const SignUpScreen = ({ navigation }) => {
     ]).start();
   }, [headerOpacity, headerTranslateY, formOpacity, formTranslateY, buttonOpacity, buttonTranslateY]);
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert(t.error || 'Error', t.fillAllFields || 'Please fill in all fields.');
       return;
@@ -58,8 +61,32 @@ const SignUpScreen = ({ navigation }) => {
       Alert.alert(t.error || 'Error', t.passwordsNotMatch || 'Passwords do not match!');
       return;
     }
-    
-    dispatch(loginUser(fullName.trim()));
+    const trimmedFullName = fullName.trim();
+
+    try {
+      const usersStr = await AsyncStorage.getItem('registeredUsers');
+      const users = usersStr ? JSON.parse(usersStr) : [];
+      
+      // Check if user already exists
+      const userExists = users.some(u => u.username.toLowerCase() === trimmedFullName.toLowerCase());
+      if (userExists) {
+        Alert.alert(t.error || 'Error', 'Account already exists with this username!');
+        return;
+      }
+      
+      // Save new user
+      users.push({ username: trimmedFullName, email: email.trim(), password });
+      await AsyncStorage.setItem('registeredUsers', JSON.stringify(users));
+    } catch (e) {
+      console.error('Signup error:', e);
+    }
+
+    // Save logged-in session
+    await AsyncStorage.setItem('loggedInUser', trimmedFullName);
+
+    const userTasks = await loadUserTasks(trimmedFullName); // This will create initial dummy tasks for a new user
+    dispatch(loadTasks(userTasks));
+    dispatch(loginUser(trimmedFullName)); // Log in with the full name as username
     // Navigate to the MainTabs screen upon successful signup
     Alert.alert(t.success || 'Success', t.accountCreated || 'Account Created Successfully! 🎉', [
       { text: t.ok || 'OK', onPress: () => navigation.replace('MainTabs') }

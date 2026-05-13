@@ -11,15 +11,21 @@ import {
   StatusBar,
   Animated
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../hooks/useTheme';
 import { loginUser } from '../store/userSlice';
+import { loadTasks } from '../store/taskSlice';
+import { loadUserTasks } from '../utils/storage';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const { t } = useTranslation();
   const { colors } = useTheme();
   const dispatch = useDispatch();
@@ -49,17 +55,77 @@ const LoginScreen = ({ navigation }) => {
     ]).start();
   }, [headerOpacity, headerTranslateY, formOpacity, formTranslateY, buttonOpacity, buttonTranslateY]);
 
-  const handleLogin = () => {
-    if (username.trim() !== '' && password.trim() !== '') {
-      dispatch(loginUser(username.trim()));
-      Alert.alert('Success', `Welcome, ${username}! 🎉`, [
-        {
-          text: 'OK',
-          onPress: () => navigation.replace('MainTabs')
+  const handleLogin = async () => {
+    const trimmedUsername = username.trim();
+    if (trimmedUsername !== '' && password.trim() !== '') {
+      try {
+        const usersStr = await AsyncStorage.getItem('registeredUsers');
+        const users = usersStr ? JSON.parse(usersStr) : [];
+        
+        // Validate User
+        const validUser = users.find(
+          u => u.username.toLowerCase() === trimmedUsername.toLowerCase() && u.password === password
+        );
+
+        if (validUser) {
+          // Save logged-in session
+          await AsyncStorage.setItem('loggedInUser', trimmedUsername);
+          
+          const userTasks = await loadUserTasks(trimmedUsername);
+          dispatch(loadTasks(userTasks));
+          dispatch(loginUser(trimmedUsername));
+          Alert.alert(t.success || 'Success', `${t.welcome || 'Welcome'}, ${trimmedUsername}! 🎉`, [
+            {
+              text: t.ok || 'OK',
+              onPress: () => navigation.replace('MainTabs')
+            }
+          ]);
+        } else {
+          Alert.alert(t.loginFailed || 'Login Failed', 'Invalid username or password. Please Sign Up first.');
         }
-      ]);
+      } catch (e) {
+        console.error('Login error:', e);
+      }
     } else {
-      Alert.alert('Login Failed', 'Please enter a valid username and password.');
+      Alert.alert(t.loginFailed || 'Login Failed', t.enterCredentials || 'Please enter a valid username and password.');
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername || !newPassword || !confirmNewPassword) {
+      Alert.alert(t.error || 'Error', 'Please fill in all fields to reset password.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert(t.error || 'Error', 'Passwords do not match!');
+      return;
+    }
+
+    try {
+      const usersStr = await AsyncStorage.getItem('registeredUsers');
+      const users = usersStr ? JSON.parse(usersStr) : [];
+      
+      const userIndex = users.findIndex(
+        u => u.username.toLowerCase() === trimmedUsername.toLowerCase()
+      );
+
+      if (userIndex !== -1) {
+        users[userIndex].password = newPassword;
+        await AsyncStorage.setItem('registeredUsers', JSON.stringify(users));
+        Alert.alert(t.success || 'Success', 'Password reset successfully! You can now login.', [
+          { text: t.ok || 'OK', onPress: () => {
+              setIsResetMode(false);
+              setPassword('');
+              setNewPassword('');
+              setConfirmNewPassword('');
+          }}
+        ]);
+      } else {
+        Alert.alert(t.error || 'Error', 'Username not found. Please Sign Up first.');
+      }
+    } catch (e) {
+      console.error('Reset password error:', e);
     }
   };
 
@@ -133,15 +199,6 @@ const LoginScreen = ({ navigation }) => {
       color: colors.primary,
       fontWeight: '600',
     },
-    demoContainer: {
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    demoText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      fontStyle: 'italic',
-    },
     loginButton: {
       backgroundColor: colors.primary,
       paddingVertical: 16,
@@ -182,8 +239,8 @@ const LoginScreen = ({ navigation }) => {
           {/* Header Section */}
           <Animated.View style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}>
             <Text style={styles.logoEmoji}>🗓️</Text>
-            <Text style={styles.title}>{t.welcomeBack}</Text>
-            <Text style={styles.subtitle}>{t.signInSubtitle}</Text>
+            <Text style={styles.title}>{isResetMode ? 'Reset Password' : t.welcomeBack}</Text>
+            <Text style={styles.subtitle}>{isResetMode ? 'Enter a new password for your account' : t.signInSubtitle}</Text>
           </Animated.View>
 
           {/* Input Fields Section */}
@@ -202,43 +259,87 @@ const LoginScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* Password Input Box */}
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>🔒</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={t.password}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
+            {!isResetMode ? (
+              <>
+                {/* Password Input Box */}
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>🔒</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t.password}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
 
-            {/* Forgot Password Link */}
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>{t.forgotPassword}</Text>
-            </TouchableOpacity>
-
-            {/* Demo Login Hint */}
-            <View style={styles.demoContainer}>
-              <Text style={styles.demoText}>{t.demoHint}</Text>
-            </View>
+                {/* Forgot Password Link */}
+                <TouchableOpacity style={styles.forgotPassword} onPress={() => setIsResetMode(true)}>
+                  <Text style={styles.forgotPasswordText}>{t.forgotPassword}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {/* New Password Input Box */}
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>🔑</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="New Password"
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
+                
+                {/* Confirm New Password Input Box */}
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>🔑</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm New Password"
+                    value={confirmNewPassword}
+                    onChangeText={setConfirmNewPassword}
+                    secureTextEntry
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
+              </>
+            )}
           </Animated.View>
 
           {/* Login Button & Footer Section */}
           <Animated.View style={{ opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] }}>
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>{t.login}</Text>
-            </TouchableOpacity>
+            {!isResetMode ? (
+              <>
+                <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                  <Text style={styles.loginButtonText}>{t.login}</Text>
+                </TouchableOpacity>
 
-            {/* Footer Section - Added a link here to navigate to the SignUp page */}
-            <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t.noAccount}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                <Text style={styles.signUpText}>{t.signUp}</Text>
-              </TouchableOpacity>
-            </View>
+                {/* Footer Section */}
+                <View style={styles.footer}>
+                  <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t.noAccount} </Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                    <Text style={styles.signUpText}>{t.signUp}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.loginButton} onPress={handleResetPassword}>
+                  <Text style={styles.loginButtonText}>Reset Password</Text>
+                </TouchableOpacity>
+
+                {/* Footer Section */}
+                <View style={styles.footer}>
+                  <TouchableOpacity onPress={() => setIsResetMode(false)}>
+                    <Text style={styles.signUpText}>Back to Login</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </Animated.View>
         </View>
       </ScrollView>
