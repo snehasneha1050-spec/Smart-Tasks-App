@@ -1,46 +1,54 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { toggleTheme, setLanguage } from '../store/themeSlice';
+import { toggleTheme, setLanguage, setNotificationsEnabled, setPreferences } from '../store/themeSlice';
 import { useTranslation } from '../hooks/useTranslation';
 import { logoutUser } from '../store/userSlice';
 import { useTheme } from '../hooks/useTheme';
+import { useAppStyles } from '../hooks/useAppStyles';
 import { CustomAlert as Alert } from '../components/CustomAlert';
+import { loadUserPreferences, saveUserPreferences, logoutUserSession, clearSavedSession } from '../utils/storage';
 
 const SettingsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { darkMode, language } = useSelector(state => state.theme);
+  const { darkMode, language, notificationsEnabled } = useSelector(state => state.theme);
+  const username = useSelector(state => state.user.username);
+  const sessionToken = useSelector(state => state.user.sessionToken);
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const styles = useAppStyles();
 
-  // Local state for notifications toggle
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  useEffect(() => {
+    const syncPreferences = async () => {
+      if (!username) return;
+      const preferences = await loadUserPreferences(username);
+      dispatch(setPreferences(preferences));
+    };
+
+    syncPreferences();
+  }, [dispatch, username]);
+
+  const persistPreferences = async (nextPreferences) => {
+    if (!username) return;
+    const mergedPreferences = {
+      darkMode: typeof nextPreferences.darkMode === 'boolean' ? nextPreferences.darkMode : darkMode,
+      language: nextPreferences.language || language,
+      notificationsEnabled: typeof nextPreferences.notificationsEnabled === 'boolean'
+        ? nextPreferences.notificationsEnabled
+        : notificationsEnabled,
+    };
+
+    await saveUserPreferences(username, mergedPreferences);
+    dispatch(setPreferences(mergedPreferences));
+  };
 
   const handleNotificationToggle = async (newValue) => {
-    setNotificationsEnabled(newValue);
-    
+    dispatch(setNotificationsEnabled(newValue));
+    await persistPreferences({ notificationsEnabled: newValue });
+
     if (newValue) {
       try {
-        // Frontend-only Local Notification logic (using @notifee/react-native)
-        
-        // 1. Request permissions (Required for iOS and Android 13+)
-        // await notifee.requestPermission();
-        
-        // 2. Create a channel (Required for Android)
-        // const channelId = await notifee.createChannel({
-        //   id: 'default',
-        //   name: 'Default Channel',
-        // });
-        
-        // 3. Display the local notification immediately
-        // await notifee.displayNotification({
-        //   title: 'Notifications Enabled ✅',
-        //   body: 'You will now receive task reminders!',
-        //   android: { channelId },
-        // });
-        
-        Alert.alert(t.success || 'Success', 'Local notifications enabled on this device!');
+        Alert.alert(t.success || 'Success', 'Notifications enabled for this account!');
       } catch (error) {
         console.log('Notification error:', error);
       }
@@ -55,7 +63,15 @@ const SettingsScreen = ({ navigation }) => {
       {
         text: t.logout,
         onPress: async () => {
-          await AsyncStorage.removeItem('loggedInUser'); // Clear login session
+          if (username && sessionToken) {
+            try {
+              await logoutUserSession({ username, sessionToken });
+            } catch (error) {
+              console.error('Session logout failed:', error);
+            }
+          }
+
+          await clearSavedSession();
           dispatch(logoutUser());
           navigation.replace('Login');
         },
@@ -66,54 +82,52 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <ScrollView 
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={styles.safeArea}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.headerTitle, { color: colors.text }]}>{t.settingsTitle}</Text>
-
-      {/* Language Options */}
-      <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: colors.primary }]}>🌐 {t.language}</Text>
+      <Text style={styles.pageTitle}>{t.settingsTitle}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🌐 {t.language}</Text>
         
         <TouchableOpacity 
-          style={[
-            styles.optionRow, 
-            { borderBottomColor: colors.border },
-            language === 'English' && { backgroundColor: colors.primary + '1A' }
-          ]}
-          onPress={() => dispatch(setLanguage('English'))}
+          style={[styles.rowMenu, language === 'English' && styles.rowMenuSelected]}
+          onPress={async () => {
+            dispatch(setLanguage('English'));
+            await persistPreferences({ language: 'English' });
+          }}
         >
-          <Text style={[styles.optionText, { color: colors.text }]}>English</Text>
+          <Text style={styles.rowMenuText}>English</Text>
           {language === 'English' && <Text>✅</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[
-            styles.optionRow, 
-            { borderBottomColor: 'transparent' },
-            language === 'Hindi' && { backgroundColor: colors.primary + '1A' }
-          ]}
-          onPress={() => dispatch(setLanguage('Hindi'))}
+          style={[styles.rowMenu, styles.rowMenuNoBorder, language === 'Hindi' && styles.rowMenuSelected]}
+          onPress={async () => {
+            dispatch(setLanguage('Hindi'));
+            await persistPreferences({ language: 'Hindi' });
+          }}
         >
-          <Text style={[styles.optionText, { color: colors.text }]}>हिंदी (Hindi)</Text>
+          <Text style={styles.rowMenuText}>हिंदी (Hindi)</Text>
           {language === 'Hindi' && <Text>✅</Text>}
         </TouchableOpacity>
       </View>
-
-      {/* Preferences Settings */}
-      <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: colors.primary }]}>⚙️ {t.preferences}</Text>
-        <View style={[styles.switchRow, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.optionText, { color: colors.text }]}>{t.darkMode}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>⚙️ {t.preferences}</Text>
+        <View style={styles.rowMenu}>
+          <Text style={styles.rowMenuText}>{t.darkMode}</Text>
           <Switch 
             value={darkMode}
-            onValueChange={() => dispatch(toggleTheme())}
+            onValueChange={async () => {
+              const nextDarkMode = !darkMode;
+              dispatch(toggleTheme());
+              await persistPreferences({ darkMode: nextDarkMode });
+            }}
             trackColor={{ false: colors.border, true: colors.primary }}
           />
         </View>
-        <View style={[styles.switchRow, { borderBottomColor: 'transparent' }]}>
-          <Text style={[styles.optionText, { color: colors.text }]}>{t.notifications}</Text>
+        <View style={[styles.rowMenu, styles.rowMenuNoBorder]}>
+          <Text style={styles.rowMenuText}>{t.notifications}</Text>
           <Switch 
             value={notificationsEnabled}
             onValueChange={handleNotificationToggle}
@@ -121,36 +135,19 @@ const SettingsScreen = ({ navigation }) => {
           />
         </View>
       </View>
-
-      {/* About App */}
-      <View style={[styles.section, { backgroundColor: colors.cardBackground }]}>
-        <Text style={[styles.sectionTitle, { color: colors.primary }]}>ℹ️ {t.about}</Text>
-        <View style={[styles.infoRow, { borderBottomColor: 'transparent' }]}>
-          <Text style={[styles.optionText, { color: colors.text }]}>{t.version}</Text>
-          <Text style={{ color: colors.textSecondary }}>1.0.0</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>ℹ️ {t.about}</Text>
+        <View style={[styles.rowMenu, styles.rowMenuNoBorder]}>
+          <Text style={styles.rowMenuText}>{t.version}</Text>
+          <Text style={styles.settingValueText}>1.0.0</Text>
         </View>
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.error }]} onPress={handleLogout}>
-        <Text style={styles.logoutText}>{t.logout}</Text>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <Text style={styles.actionBtnText}>{t.logout}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 20 },
-  section: { borderRadius: 12, padding: 16, marginBottom: 20, elevation: 2 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
-  optionRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, paddingHorizontal: 10, borderRadius: 8 },
-  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
-  optionText: { fontSize: 16 },
-  logoutButton: { padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 },
-  logoutText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' }
-});
-
 export default SettingsScreen;

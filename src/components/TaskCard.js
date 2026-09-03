@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from '../hooks/useTranslation';
 
 const TaskCard = ({ task, onPress, onEdit, onDelete }) => {
+  const { t } = useTranslation();
   
   const getPriorityColor = (priority) => {
     switch(priority) {
@@ -9,6 +11,26 @@ const TaskCard = ({ task, onPress, onEdit, onDelete }) => {
       case 'Medium': return '#FFC107';
       case 'Low': return '#4CAF50';
       default: return '#666';
+    }
+  };
+
+  const getCategoryTranslation = (cat) => {
+    switch(cat) {
+      case 'Work': return t.work || 'Work';
+      case 'Personal': return t.personal || 'Personal';
+      case 'Shopping': return t.shopping || 'Shopping';
+      case 'Health': return t.health || 'Health';
+      case 'Other': return t.other || 'Other';
+      default: return cat;
+    }
+  };
+
+  const getPriorityTranslation = (prio) => {
+    switch(prio) {
+      case 'High': return t.high || 'High';
+      case 'Medium': return t.medium || 'Medium';
+      case 'Low': return t.low || 'Low';
+      default: return prio;
     }
   };
 
@@ -21,7 +43,7 @@ const TaskCard = ({ task, onPress, onEdit, onDelete }) => {
           {task.title}
         </Text>
         <Text style={styles.category} numberOfLines={1}>
-        {task.category} • <Text style={{ color: getPriorityColor(task.priority), fontWeight: 'bold' }}>{task.priority}</Text> • <Text style={{ color: task.completed ? '#4CAF50' : '#FF9800', fontWeight: 'bold' }}>{task.completed ? 'Completed' : 'Pending'}</Text>
+        {getCategoryTranslation(task.category)} • <Text style={{ color: getPriorityColor(task.priority), fontWeight: 'bold' }}>{getPriorityTranslation(task.priority)}</Text> • <Text style={{ color: task.completed ? '#4CAF50' : '#FF9800', fontWeight: 'bold' }}>{task.completed ? (t.completed || 'Completed') : (t.pending || 'Pending')}</Text>
         {task.dueDate && ` • ⏰ ${new Date(task.dueDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`}
         </Text>
       </View>
@@ -32,9 +54,11 @@ const TaskCard = ({ task, onPress, onEdit, onDelete }) => {
           <Text style={styles.iconText}>✏️</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={[styles.iconButton, styles.deleteButton]} onPress={onDelete}>
-          <Text style={styles.iconText}>🗑️</Text>
-        </TouchableOpacity>
+        {onDelete && (
+          <TouchableOpacity style={[styles.iconButton, styles.deleteButton]} onPress={onDelete}>
+            <Text style={styles.iconText}>🗑️</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
     </TouchableOpacity>

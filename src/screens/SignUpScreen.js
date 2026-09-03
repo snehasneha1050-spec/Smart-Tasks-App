@@ -4,20 +4,21 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   Animated
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { useTranslation } from '../hooks/useTranslation';
+import { useAppStyles } from '../hooks/useAppStyles';
+import { useTheme } from '../hooks/useTheme';
 import { loginUser } from '../store/userSlice';
-import { loadTasks } from '../store/taskSlice';
-import { loadUserTasks } from '../utils/storage';
+import { setPreferences } from '../store/themeSlice';
+import { fetchTasks } from '../store/taskSlice';
+import { signup, login } from '../services/authService';import { setAuthToken } from '../services/api';import { saveSession } from '../utils/storage';
 
 const SignUpScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
@@ -25,9 +26,9 @@ const SignUpScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPasswordState] = useState('');
   const { t } = useTranslation();
+  const styles = useAppStyles();
+  const { colors } = useTheme();
   const dispatch = useDispatch();
-
-  // Animation Values
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerTranslateY = useRef(new Animated.Value(30)).current;
   const formOpacity = useRef(new Animated.Value(0)).current;
@@ -64,54 +65,61 @@ const SignUpScreen = ({ navigation }) => {
     const trimmedFullName = fullName.trim();
 
     try {
-      const usersStr = await AsyncStorage.getItem('registeredUsers');
-      const users = usersStr ? JSON.parse(usersStr) : [];
-      
-      // Check if user already exists
-      const userExists = users.some(u => u.username.toLowerCase() === trimmedFullName.toLowerCase());
-      if (userExists) {
-        Alert.alert(t.error || 'Error', 'Account already exists with this username!');
+      const result = await signup({
+        name: trimmedFullName,
+        email: email.trim(),
+        password,
+      });
+
+      if (!result.success) {
+        Alert.alert(t.error || 'Error', result.message || 'Account could not be created.');
         return;
       }
-      
-      // Save new user
-      users.push({ username: trimmedFullName, email: email.trim(), password });
-      await AsyncStorage.setItem('registeredUsers', JSON.stringify(users));
+
+      const loginResult = await login({
+        email: email.trim(),
+        username: trimmedFullName,
+        password,
+      });
+      if (!loginResult.success) {
+        Alert.alert(t.error || 'Error', loginResult.message || 'Login after registration failed.');
+        return;
+      }
+
+      const sessionToken = loginResult.token || null;
+      setAuthToken(sessionToken);
+      dispatch(fetchTasks());
+      dispatch(setPreferences({
+        darkMode: false,
+        language: 'English',
+        notificationsEnabled: true,
+      }));
+      dispatch(loginUser({ username: trimmedFullName, sessionToken }));
+      await saveSession({ username: trimmedFullName, sessionToken });
+      Alert.alert(t.success || 'Success', t.accountCreated || 'Account Created Successfully! 🎉', [
+        { text: t.ok || 'OK', onPress: () => navigation.replace('MainTabs') }
+      ]);
     } catch (e) {
       console.error('Signup error:', e);
+      Alert.alert(t.error || 'Error', 'Unable to create account in the MySQL backend.');
     }
-
-    // Save logged-in session
-    await AsyncStorage.setItem('loggedInUser', trimmedFullName);
-
-    const userTasks = await loadUserTasks(trimmedFullName); // This will create initial dummy tasks for a new user
-    dispatch(loadTasks(userTasks));
-    dispatch(loginUser(trimmedFullName)); // Log in with the full name as username
-    // Navigate to the MainTabs screen upon successful signup
-    Alert.alert(t.success || 'Success', t.accountCreated || 'Account Created Successfully! 🎉', [
-      { text: t.ok || 'OK', onPress: () => navigation.replace('MainTabs') }
-    ]);
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.keyboardAvoidingView}
+      style={styles.safeArea}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#F3F4F6" />
-      <ScrollView contentContainerStyle={styles.scrollViewContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.mainContainer}>
-          
-          {/* Header Section */}
-          <Animated.View style={[styles.header, { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}>
-            <Text style={styles.logoEmoji}>✨</Text>
-            <Text style={styles.title}>{t.createAccount}</Text>
-            <Text style={styles.subtitle}>{t.signUpSubtitle}</Text>
+      <StatusBar barStyle={colors.isDark ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.authMain}>
+          <Animated.View style={[styles.authHeader, { opacity: headerOpacity, transform: [{ translateY: headerTranslateY }] }]}>
+            <Text style={styles.authLogo}>✨</Text>
+            <Text style={styles.authTitle}>{t.createAccount}</Text>
+            <Text style={styles.authSubtitle}>{t.signUpSubtitle}</Text>
           </Animated.View>
 
-          {/* Input Fields Section */}
-          <Animated.View style={[styles.inputSection, { opacity: formOpacity, transform: [{ translateY: formTranslateY }] }]}>
-            
+          <Animated.View style={[styles.authInputSection, { opacity: formOpacity, transform: [{ translateY: formTranslateY }] }]}>
             <View style={styles.inputWrapper}>
               <Text style={styles.inputIcon}>👤</Text>
               <TextInput
@@ -119,7 +127,7 @@ const SignUpScreen = ({ navigation }) => {
                 placeholder={t.fullNamePlaceholder || "Full Name"}
                 value={fullName}
                 onChangeText={setFullName}
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
 
@@ -132,7 +140,7 @@ const SignUpScreen = ({ navigation }) => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
 
@@ -144,7 +152,7 @@ const SignUpScreen = ({ navigation }) => {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
 
@@ -156,71 +164,26 @@ const SignUpScreen = ({ navigation }) => {
                 value={confirmPassword}
                 onChangeText={setConfirmPasswordState}
                 secureTextEntry
-                placeholderTextColor="#A0A0A0"
+                placeholderTextColor={colors.textSecondary}
               />
             </View>
           </Animated.View>
 
-          {/* Sign Up Button & Footer Section */}
           <Animated.View style={{ opacity: buttonOpacity, transform: [{ translateY: buttonTranslateY }] }}>
-            <TouchableOpacity style={styles.signUpBtn} onPress={handleSignUp}>
-              <Text style={styles.signUpBtnText}>{t.signUp}</Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleSignUp}>
+              <Text style={styles.primaryBtnText}>{t.signUp}</Text>
             </TouchableOpacity>
 
-            {/* Footer Section */}
-            <View style={styles.footer}>
+            <View style={styles.footerRow}>
               <Text style={styles.footerText}>{t.alreadyHaveAccount} </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.loginText}>{t.login}</Text>
+                <Text style={styles.linkText}>{t.login}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
-
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-  },
-  mainContainer: { flex: 1, backgroundColor: '#F3F4F6', padding: 24, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: 40 },
-  logoEmoji: { fontSize: 50, marginBottom: 10, color: '#6200EA' },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#333333', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#666666', textAlign: 'center' },
-  inputSection: { marginBottom: 24 },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    height: 56,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  inputIcon: { fontSize: 18, marginRight: 12, color: '#A0A0A0' },
-  input: { flex: 1, fontSize: 16, color: '#333333', height: '100%' },
-  signUpBtn: {
-    backgroundColor: '#6200EA',
-    borderRadius: 12,
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    marginBottom: 24,
-  },
-  signUpBtnText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 },
-  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-  footerText: { color: '#666666', fontSize: 14 },
-  loginText: { color: '#6200EA', fontSize: 14, fontWeight: 'bold' },
-});
-
 export default SignUpScreen;

@@ -1,15 +1,17 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, StyleSheet } from 'react-native';
+import { Text } from 'react-native';
 
 // Import the screens that will be inside the bottom tabs
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import { useAppStyles } from '../hooks/useAppStyles';
+import { useTheme } from '../hooks/useTheme';
 
 const Tab = createBottomTabNavigator();
 
-const TabBarIcon = ({ focused, routeName }) => {
+const TabBarIcon = ({ focused, routeName, styles }) => {
   let iconEmoji;
   if (routeName === 'Home') iconEmoji = '🏠';
   else if (routeName === 'Profile') iconEmoji = '👤';
@@ -22,26 +24,22 @@ const TabBarIcon = ({ focused, routeName }) => {
   );
 };
 
-const getTabBarIcon = (routeName) => ({ focused }) => (
-  <TabBarIcon focused={focused} routeName={routeName} />
+const renderTabBarIcon = ({ route, focused, styles }) => (
+  <TabBarIcon focused={focused} routeName={route.name} styles={styles} />
 );
 
 const TabNavigator = () => {
+  const styles = useAppStyles();
+  const { colors } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: getTabBarIcon(route.name),
-        tabBarActiveTintColor: '#6200EA',
+        tabBarIcon: ({ focused }) => renderTabBarIcon({ route, focused, styles }),
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
-        tabBarStyle: {
-          height: 65,
-          paddingBottom: 10,
-          paddingTop: 10,
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderColor: '#E5E7EB',
-        }
+        tabBarStyle: styles.tabBar,
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
@@ -50,16 +48,5 @@ const TabNavigator = () => {
     </Tab.Navigator>
   );
 };
-
-const styles = StyleSheet.create({
-  tabIcon: {
-    fontSize: 24,
-    opacity: 0.4,
-  },
-  tabIconFocused: {
-    fontSize: 24,
-    opacity: 1,
-  },
-});
 
 export default TabNavigator;

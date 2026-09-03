@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import { LogBox } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
-import { Provider, useDispatch } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import notifee, { EventType } from '@notifee/react-native';
 import { store } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
-import { loadTasks } from './src/store/taskSlice';
-import { loadTasks as loadTasksFromStorage } from './src/utils/storage';
+import { logoutUser } from './src/store/userSlice';
+import { clearSavedSession } from './src/utils/storage';
 import { CustomAlertProvider } from './src/components/CustomAlert';
 
 // Hide all yellow warnings (Logs)
@@ -16,21 +16,41 @@ const navigationRef = createNavigationContainerRef();
 
 function AppContent() {
   const dispatch = useDispatch();
+  const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
+  const username = useSelector((state) => state.user.username);
+  const sessionToken = useSelector((state) => state.user.sessionToken);
 
   useEffect(() => {
-    // Load persisted tasks on app startup
-    const initializeTasks = async () => {
-      const persistedTasks = await loadTasksFromStorage();
-      if (persistedTasks && persistedTasks.length > 0) {
-        dispatch(loadTasks(persistedTasks));
+    if (!navigationRef.isReady()) return;
+
+    const unsubscribe = navigationRef.addListener('state', async () => {
+      const currentRoute = navigationRef.getCurrentRoute();
+      const protectedRoutes = ['MainTabs', 'AddTask', 'TaskDetail', 'EditTask'];
+
+      if (!currentRoute || !protectedRoutes.includes(currentRoute.name)) {
+        return;
       }
-    };
-    
-    initializeTasks();
-  }, [dispatch]);
+
+      if (!isLoggedIn || !username || !sessionToken) {
+        await clearSavedSession();
+        dispatch(logoutUser());
+        navigationRef.navigate('Login');
+        return;
+      }
+
+      // JWT-based session is checked during login and app startup.
+      // The route guard here only ensures a valid token exists before protected screens are shown.
+      if (!sessionToken) {
+        await clearSavedSession();
+        dispatch(logoutUser());
+        navigationRef.navigate('Login');
+      }
+    });
+
+    return unsubscribe;
+  }, [dispatch, isLoggedIn, username, sessionToken]);
 
   useEffect(() => {
-    // యాప్ ఓపెన్/మినిమైజ్ లో ఉన్నప్పుడు నోటిఫికేషన్ నొక్కితే నేరుగా వెళ్లడానికి
     const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
       if (type === EventType.PRESS) {
         const taskData = detail.notification?.data?.task;
@@ -52,8 +72,9 @@ function AppContent() {
 export default function App() {
   return (
     <Provider store={store}>
-      <AppContent />
-      <CustomAlertProvider />
+      <CustomAlertProvider>
+        <AppContent />
+      </CustomAlertProvider>
     </Provider>
   );
 }

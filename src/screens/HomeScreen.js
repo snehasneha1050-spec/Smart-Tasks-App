@@ -1,40 +1,23 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Animated, TextInput } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import TaskCard from '../components/TaskCard';
 import { useTranslation } from '../hooks/useTranslation';
 import { useTheme } from '../hooks/useTheme';
+import { useAppStyles } from '../hooks/useAppStyles';
 import { deleteTask } from '../store/taskSlice';
 import { CustomAlert as Alert } from '../components/CustomAlert';
+import { transliterateToHindi } from '../utils/transliterate';
 
 const HomeScreen = ({ navigation }) => {
-  const tasks = useSelector(state => state.tasks.tasks);
+  const tasks = useSelector(state => (Array.isArray(state.tasks.tasks) ? state.tasks.tasks : []));
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const styles = useAppStyles();
   const dispatch = useDispatch();
   
-  // Get current language to know when to translate unknown names
   const language = useSelector(state => state.theme?.language);
   const rawUsername = useSelector(state => state.user?.username);
-
-  // Simple phonetic transliteration for unknown names
-  const transliterateToHindi = (text) => {
-    if (!text) return '';
-    const rules = [
-      [/sh/g, 'श'], [/ch/g, 'च'], [/th/g, 'थ'], [/ph/g, 'फ'], [/gh/g, 'घ'], [/dh/g, 'ध'], [/bh/g, 'भ'],
-      [/a/g, 'ा'], [/e/g, 'े'], [/i/g, 'ि'], [/o/g, 'ो'], [/u/g, 'ु'],
-      [/b/g, 'ब'], [/c/g, 'क'], [/d/g, 'द'], [/f/g, 'फ'], [/g/g, 'ग'], [/h/g, 'ह'], [/j/g, 'ज'],
-      [/k/g, 'क'], [/l/g, 'ल'], [/m/g, 'म'], [/n/g, 'न'], [/p/g, 'प'], [/q/g, 'क'], [/r/g, 'र'],
-      [/s/g, 'स'], [/t/g, 'त'], [/v/g, 'व'], [/w/g, 'व'], [/x/g, 'क्स'], [/y/g, 'य'], [/z/g, 'ज़']
-    ];
-    let hindiText = text.toLowerCase();
-    rules.forEach(([eng, hin]) => { hindiText = hindiText.replace(eng, hin); });
-    
-    // Fix starting vowels
-    const startVowels = { 'ा': 'आ', 'े': 'ए', 'ि': 'इ', 'ो': 'ओ', 'ु': 'उ' };
-    if (startVowels[hindiText.charAt(0)]) hindiText = startVowels[hindiText.charAt(0)] + hindiText.slice(1);
-    return hindiText;
-  };
 
   let username = t.user || 'User';
   if (rawUsername) {
@@ -43,11 +26,11 @@ const HomeScreen = ({ navigation }) => {
     else username = rawUsername;
   }
 
-  const [filter, setFilter] = useState('all'); // all, completed, pending
-  const [sortBy, setSortBy] = useState('priority'); // priority, date, title
+  const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('priority');
+  const [searchQuery, setSearchQuery] = useState('');
   const [fadeAnim] = useState(new Animated.Value(0));
 
-  // Animation effect
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -56,19 +39,17 @@ const HomeScreen = ({ navigation }) => {
     }).start();
   }, [fadeAnim]);
 
-  // Calculate task statistics
   const completedCount = useMemo(() => tasks.filter(task => task.completed).length, [tasks]);
   const pendingCount = useMemo(() => tasks.filter(task => !task.completed).length, [tasks]);
   const completionPercentage = useMemo(() => tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0, [tasks.length, completedCount]);
 
-  // Filter tasks based on selected filter
   const filteredTasks = useMemo(() => tasks.filter(task => {
-    if (filter === 'completed') return task.completed;
-    if (filter === 'pending') return !task.completed;
-    return true;
-  }), [tasks, filter]);
+    const matchesFilter = filter === 'all' || (filter === 'completed' && task.completed) || (filter === 'pending' && !task.completed);
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
+    return matchesFilter && matchesSearch;
+  }), [tasks, filter, searchQuery]);
 
-  // Sort tasks
   const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
     if (sortBy === 'priority') {
       const priorityOrder = { high: 1, medium: 2, low: 3 };
@@ -76,18 +57,17 @@ const HomeScreen = ({ navigation }) => {
       const bPriority = b.priority?.toLowerCase() || 'low';
       return priorityOrder[aPriority] - priorityOrder[bPriority];
     }
-    //Title sorting 
     if (sortBy === 'title') {
       return a.title.localeCompare(b.title);
     }
-    // ✅ Date sorting (latest first)
     if (sortBy === 'date') {
-      return new Date(b.createdAt) - new Date(a.createdAt);
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
     }
     return 0;
   }), [filteredTasks, sortBy]);
 
-  // Convert tasks to Hindi characters if language is Hindi
   const displayTasks = useMemo(() => {
     if (language !== 'Hindi') return sortedTasks;
     return sortedTasks.map(task => ({
@@ -101,12 +81,10 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('TaskDetail', { task });
   }, [navigation]);
 
-  // New handler for editing
   const handleEditTask = useCallback((task) => {
     navigation.navigate('EditTask', { task });
   }, [navigation]);
 
-  // New handler for deleting with confirmation
   const handleDeleteTask = useCallback((taskId) => {
     Alert.alert(t.deleteTask || 'Delete Task', t.deleteConfirm || 'Are you sure you want to delete this task?', [
       { text: t.cancel || 'Cancel', style: 'cancel' },
@@ -141,7 +119,6 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim, backgroundColor: colors.background }]}>
-      {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.headerContent}>
           <View>
@@ -153,7 +130,6 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Task Statistics */}
       <View style={styles.statsContainer}>
         <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t.totalTasks}</Text>
@@ -169,7 +145,6 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <Text style={[styles.progressLabel, { color: colors.text }]}>{t.completionRate}: {completionPercentage}%</Text>
         <View style={[styles.progressBar, { backgroundColor: colors.inputBackground }]}>
@@ -182,14 +157,28 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Filter Tabs */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder={t.search || "Search tasks..."}
+          placeholderTextColor={colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
+            <Text style={styles.clearSearchText}>✖</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.filterContainer}>
         {renderFilterButton('all', t.allTasks)}
         {renderFilterButton('pending', `${t.pending} (${pendingCount})`)}
         {renderFilterButton('completed', `${t.completed} (${completedCount})`)}
       </View>
 
-      {/* Sort Options */}
       <View style={styles.sortContainer}>
         <Text style={[styles.sortLabel, { color: colors.text }]}>{t.sortBy}:</Text>
         <View style={styles.sortButtons}>
@@ -199,11 +188,10 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Tasks List */}
       <ScrollView 
         style={styles.taskList}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.homeScrollContent}
       >
         {displayTasks.length > 0 ? (
           displayTasks.map((task) => (
@@ -220,15 +208,15 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.emptyStateIcon}>📭</Text>
             <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t.noTasks}</Text>
             <Text style={[styles.emptyStateDescription, { color: colors.textSecondary }]}>
-              {filter === 'completed' && 'Complete some tasks to see them here!'}
-              {filter === 'pending' && 'All tasks are completed! 🎉'}
-              {filter === 'all' && t.createFirstTask}
+              {searchQuery.length > 0 && `No tasks match "${searchQuery}"`}
+              {searchQuery.length === 0 && filter === 'completed' && 'Complete some tasks to see them here!'}
+              {searchQuery.length === 0 && filter === 'pending' && 'All tasks are completed! 🎉'}
+              {searchQuery.length === 0 && filter === 'all' && t.createFirstTask}
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('AddTask')}
@@ -239,219 +227,5 @@ const HomeScreen = ({ navigation }) => {
     </Animated.View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 30,
-    backgroundColor: '#6200EA',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    elevation: 8,
-    shadowColor: '#6200EA',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  subText: {
-    fontSize: 15,
-    color: '#E0E0E0',
-    marginTop: 6,
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    gap: 12,
-    marginBottom: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFF',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    elevation: 2,
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#6200EA',
-  },
-  statValueCompleted: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#4CAF50',
-  },
-  statValuePending: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FF9800',
-  },
-  progressContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    elevation: 2,
-  },
-  progressLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#6200EA',
-    borderRadius: 4,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#E8EAEF',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  filterButtonActive: {
-    backgroundColor: '#6200EA',
-    borderColor: '#6200EA',
-  },
-  filterButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
-  },
-  filterButtonTextActive: {
-    color: '#FFF',
-  },
-  sortContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  sortLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-  },
-  sortButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  sortButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: '#E8EAEF',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  sortButtonActive: {
-    backgroundColor: '#6200EA',
-    borderColor: '#6200EA',
-  },
-  sortButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-  },
-  sortButtonTextActive: {
-    color: '#FFF',
-  },
-  taskList: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 80,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptyStateDescription: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
-    backgroundColor: '#6200EA',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  fabIcon: {
-    fontSize: 32,
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-});
 
 export default HomeScreen;

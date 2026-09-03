@@ -17,7 +17,7 @@ export const CustomAlert = {
   }
 };
 
-export const CustomAlertProvider = () => {
+export const CustomAlertProvider = ({ children }) => {
   const [config, setConfig] = useState({ visible: false, title: '', message: '', buttons: [] });
 
   useEffect(() => {
@@ -29,55 +29,59 @@ export const CustomAlertProvider = () => {
         setConfig(prev => ({ ...prev, visible: false }));
       }
     };
+    return () => {
+      globalAlertRef = null; // Cleanup on unmount
+    };
   }, []);
 
-  if (!config.visible) return null;
-
   return (
-    <Modal
-      transparent
-      animationType="fade"
-      visible={config.visible}
-      onRequestClose={() => globalAlertRef.close()}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.alertBox}>
-          {config.title ? <Text style={styles.title}>{config.title}</Text> : null}
-          {config.message ? <Text style={styles.message}>{config.message}</Text> : null}
-          
-          <View style={styles.buttonContainer}>
-            {config.buttons && config.buttons.length > 0 ? (
-              config.buttons.map((btn, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.button,
-                    btn.style === 'cancel' || (config.buttons.length === 2 && index === 0) ? styles.cancelButton : null,
-                    btn.style === 'destructive' ? styles.destructiveButton : null,
-                  ]}
-                  onPress={() => {
-                    if (btn.onPress) btn.onPress();
-                    globalAlertRef.close();
-                  }}
-                >
-                  <Text style={[
-                    styles.buttonText,
-                    btn.style === 'cancel' || (config.buttons.length === 2 && index === 0) ? styles.cancelText : null,
-                    btn.style === 'destructive' ? styles.destructiveText : null,
-                  ]}>
-                    {btn.text}
-                  </Text>
+    <>
+      {children}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={config.visible}
+        onRequestClose={() => globalAlertRef.close()}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.alertBox}>
+            {config.title ? <Text style={styles.title}>{config.title}</Text> : null}
+            {config.message ? <Text style={styles.message}>{config.message}</Text> : null}
+            
+            <View style={styles.buttonContainer}>
+              {config.buttons && config.buttons.length > 0 ? (
+                config.buttons.map((btn, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.button,
+                      btn.style === 'cancel' || (config.buttons.length === 2 && index === 0) ? styles.cancelButton : null,
+                      btn.style === 'destructive' ? styles.destructiveButton : null,
+                    ]}
+                    onPress={() => {
+                      if (btn.onPress) btn.onPress();
+                      globalAlertRef.close();
+                    }}
+                  >
+                    <Text style={[
+                      styles.buttonText,
+                      btn.style === 'cancel' || (config.buttons.length === 2 && index === 0) ? styles.cancelText : null,
+                      btn.style === 'destructive' ? styles.destructiveText : null,
+                    ]}>
+                      {btn.text}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <TouchableOpacity style={styles.button} onPress={() => globalAlertRef.close()}>
+                  <Text style={styles.buttonText}>OK</Text>
                 </TouchableOpacity>
-              ))
-            ) : (
-              <TouchableOpacity style={styles.button} onPress={() => globalAlertRef.close()}>
-                <Text style={styles.buttonText}>OK</Text>
-              </TouchableOpacity>
-            )}
+              )}
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+    </>
   );
 };
 
