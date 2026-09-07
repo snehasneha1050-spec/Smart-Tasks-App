@@ -7,13 +7,12 @@ import { logoutUser } from '../store/userSlice';
 import { useTheme } from '../hooks/useTheme';
 import { useAppStyles } from '../hooks/useAppStyles';
 import { CustomAlert as Alert } from '../components/CustomAlert';
-import { loadUserPreferences, saveUserPreferences, logoutUserSession, clearSavedSession } from '../utils/storage';
+import { loadUserPreferences, saveUserPreferences, clearSavedSession } from '../utils/storage';
 
 const SettingsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { darkMode, language, notificationsEnabled } = useSelector(state => state.theme);
   const username = useSelector(state => state.user.username);
-  const sessionToken = useSelector(state => state.user.sessionToken);
   const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = useAppStyles();
@@ -63,14 +62,6 @@ const SettingsScreen = ({ navigation }) => {
       {
         text: t.logout,
         onPress: async () => {
-          if (username && sessionToken) {
-            try {
-              await logoutUserSession({ username, sessionToken });
-            } catch (error) {
-              console.error('Session logout failed:', error);
-            }
-          }
-
           await clearSavedSession();
           dispatch(logoutUser());
           navigation.replace('Login');

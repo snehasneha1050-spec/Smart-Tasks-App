@@ -109,7 +109,48 @@ const login = async (req, res) => {
   }
 };
 
+const resetPassword = async (req, res) => {
+  try {
+    const { username, newPassword } = req.body || {};
+    const identifier = (username || '').trim();
+
+    if (!identifier || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and new password are required.',
+      });
+    }
+
+    const [rows] = await db.query(
+      'SELECT id FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(name) = LOWER(?) LIMIT 1',
+      [identifier, identifier]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Username not found. Please Sign Up first.',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, rows[0].id]);
+
+    return res.json({
+      success: true,
+      message: 'Password reset successfully.',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Password reset failed.',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
+  resetPassword,
 };

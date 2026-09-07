@@ -1,10 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import { saveUserTasks, loadUserTasks } from '../src/utils/storage';
+import api from '../src/services/api';
+import { saveUserPreferences } from '../src/utils/storage';
+
+jest.mock('../src/services/api', () => ({
+  __esModule: true,
+  default: {
+    get: jest.fn(),
+    put: jest.fn(),
+  },
+}));
 
 describe('storage API', () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    api.get.mockReset();
+    api.put.mockReset();
   });
 
   afterEach(() => {
@@ -33,35 +43,29 @@ describe('storage API', () => {
     expect(content).not.toMatch(/@react-native-async-storage\/async-storage|loggedInUser/);
   });
 
-  it('saves tasks through the backend API', async () => {
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true }),
+  it('saves preferences through the authenticated backend API', async () => {
+    api.put.mockResolvedValue({
+      data: { success: true, preferences: { darkMode: true, language: 'Hindi', notificationsEnabled: false } },
     });
 
-    await saveUserTasks('alice', [{ id: '1', title: 'Task 1', completed: false }]);
+    const preferences = await saveUserPreferences('alice', {
+      darkMode: true,
+      language: 'Hindi',
+      notificationsEnabled: false,
+    });
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/tasks/alice'),
-      expect.objectContaining({
-        method: 'PUT',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-      })
-    );
+    expect(api.put).toHaveBeenCalledWith('/user/preferences', {
+      darkMode: true,
+      language: 'Hindi',
+      notificationsEnabled: false,
+    });
+    expect(preferences.language).toBe('Hindi');
   });
 
-  it('loads tasks from the backend API', async () => {
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ tasks: [{ id: '2', title: 'Task 2', completed: true }] }),
-    });
+  it('does not contain legacy username-based API endpoints', () => {
+    const storageSource = fs.readFileSync(path.join(__dirname, '../src/utils/storage.js'), 'utf8');
 
-    const tasks = await loadUserTasks('alice');
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/tasks/alice'),
-      expect.objectContaining({ method: 'GET' })
-    );
-    expect(tasks).toEqual([{ id: '2', title: 'Task 2', completed: true }]);
+    expect(storageSource).not.toMatch(/\/api\/(tasks|preferences|auth\/session)/);
+    expect(storageSource).toContain("api.get('/user/preferences')");
   });
 });

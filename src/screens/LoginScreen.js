@@ -18,7 +18,7 @@ import { useAppStyles } from '../hooks/useAppStyles';
 import { loginUser } from '../store/userSlice';
 import { setPreferences } from '../store/themeSlice';
 import { fetchTasks } from '../store/taskSlice';
-import { login as loginUserRequest } from '../services/authService';
+import { login as loginUserRequest, resetPassword as resetUserPassword } from '../services/authService';
 import { setAuthToken } from '../services/api';
 import { saveSession } from '../utils/storage';
 
@@ -122,6 +122,7 @@ const LoginScreen = ({ navigation }) => {
               setConfirmNewPassword('');
           }}
         ]);
+        
       } else {
         Alert.alert(t.error || 'Error', 'Username not found. Please Sign Up first.');
       }
