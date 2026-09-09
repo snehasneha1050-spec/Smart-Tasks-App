@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   is_daily BOOLEAN DEFAULT FALSE,
   subtasks JSON,
   PRIMARY KEY (id),
-  KEY idx_user_id (user_id),
+  KEY idx_tasks_user_id (user_id),
   CONSTRAINT fk_tasks_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

@@ -18,7 +18,9 @@ import { useTheme } from '../hooks/useTheme';
 import { loginUser } from '../store/userSlice';
 import { setPreferences } from '../store/themeSlice';
 import { fetchTasks } from '../store/taskSlice';
-import { signup, login } from '../services/authService';import { setAuthToken } from '../services/api';import { saveSession } from '../utils/storage';
+import { signup } from '../services/authService';
+import { setAuthToken } from '../services/api';
+import { saveSession } from '../utils/storage';
 
 const SignUpScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
@@ -76,17 +78,11 @@ const SignUpScreen = ({ navigation }) => {
         return;
       }
 
-      const loginResult = await login({
-        email: email.trim(),
-        username: trimmedFullName,
-        password,
-      });
-      if (!loginResult.success) {
-        Alert.alert(t.error || 'Error', loginResult.message || 'Login after registration failed.');
-        return;
+      const sessionToken = result.token || null;
+      if (!sessionToken) {
+        throw new Error('Signup response did not include an authentication token.');
       }
 
-      const sessionToken = loginResult.token || null;
       setAuthToken(sessionToken);
       dispatch(fetchTasks());
       dispatch(setPreferences({

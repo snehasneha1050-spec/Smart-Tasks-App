@@ -36,9 +36,10 @@ Smart Tasks App helps you organize your daily activities, track your progress, a
 - 🔍 **Filtering & Sorting**: Filter tasks by status (*All, Pending, Completed*) and sort them by Priority, Title, or Date.
 - 🌍 **Multi-language Support**: Seamlessly switch between **English** and **Hindi**.
 - 🌗 **Theming**: **Dark** and **Light** mode support dynamically adapting to your preference.
-- 💾 **Local Storage**: Persistent data retention using `AsyncStorage`.
+- 💾 **Session & Preferences**: Encrypted session storage and MySQL-backed user preferences.
 - 🔔 **Custom Alerts**: Beautiful, customizable alert dialogs built from scratch.
-- 🔐 **Authentication Flow**: Smooth Splash Screen transition into mockup Sign up and Login flows.
+- 🔐 **Authentication Flow**: JWT-based Sign up, Login, password reset, and protected API access.
+- 🔔 **Task Reminders**: Scheduled reminders using Notifee.
 
 ---
 
@@ -49,7 +50,11 @@ Smart Tasks App helps you organize your daily activities, track your progress, a
 | **Framework** | React Native |
 | **State Management**| Redux Toolkit (`react-redux`, `@reduxjs/toolkit`) |
 | **Navigation** | React Navigation (`native`, `native-stack`, `bottom-tabs`) |
-| **Storage** | AsyncStorage (`@react-native-async-storage/async-storage`) |
+| **API Client** | Axios |
+| **Backend** | Core Java JDK `HttpServer`, JDBC, JWT |
+| **Database** | MySQL using JDBC |
+| **Secure Session Storage** | `react-native-encrypted-storage` |
+| **Notifications** | Notifee |
 | **Language / i18n** | Custom translation hook setup |
 
 ---
@@ -58,18 +63,75 @@ Smart Tasks App helps you organize your daily activities, track your progress, a
 
 ```text
 src/
- ├── components/       # Reusable UI components (TaskCard, CustomAlert, CustomButton)
- ├── hooks/            # Custom React hooks (useTranslation, useTheme)
- ├── screens/          # Application screens (Home, AddTask, TaskDetail, Profile, Settings, etc.)
- ├── store/            # Redux setup and slices (taskSlice, themeSlice)
- └── utils/            # Utilities like AsyncStorage helpers and translations data
+ ├── components/       # Reusable UI components
+ ├── hooks/            # Theme, styles, and translation hooks
+ ├── navigation/       # Stack and bottom-tab navigation
+ ├── screens/          # Login, Home, task, Profile, and Settings screens
+ ├── services/         # Axios API client and API service functions
+ ├── store/            # Redux store, user, task, and theme slices
+ └── utils/            # Session, preferences, translations, and helpers
+
+backend-java/
+ ├── src/main/java/com/smarttasks/ # Core Java API and JDBC code
+ ├── sql/schema.sql                 # MySQL schema
+ ├── pom.xml                        # Java dependencies and build config
+ └── README.md                      # Backend run instructions
 ```
+
+## Architecture
+
+```text
+React Native app -> Axios REST API -> Core Java backend -> MySQL
+```
+
+The mobile app does not connect directly to MySQL. It calls the Express API using
+Axios. The backend validates the JWT token, runs parameterized JDBC queries, and
+returns JSON responses.
+
+The main navigation flow is:
+
+```text
+Splash -> Login or MainTabs
+MainTabs -> Home, Profile, Settings
+Home -> AddTask, TaskDetail, EditTask
+```
+
+## API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/signup` | Create a user account |
+| `POST` | `/api/auth/login` | Authenticate a user and return a JWT |
+| `POST` | `/api/auth/reset-password` | Reset a password |
+
+### Tasks (JWT required)
+
+| Method | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/api/tasks` | Get the logged-in user's tasks |
+| `GET` | `/api/tasks/:id` | Get one task |
+| `POST` | `/api/tasks` | Create a task |
+| `PUT` | `/api/tasks/:id` | Update a task |
+| `DELETE` | `/api/tasks/:id` | Delete a task |
+| `PATCH` | `/api/tasks/:id/toggle` | Toggle completion |
+
+### User preferences (JWT required)
+
+| Method | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/api/user/profile` | Get profile details |
+| `GET` | `/api/user/preferences` | Load saved preferences |
+| `PUT` | `/api/user/preferences` | Save preferences |
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- **Node.js** installed (v16 or above recommended)
+- **JDK** installed (17 or above)
+- **Maven** installed
+- **MySQL** installed and running
 - React Native development environment set up (Android Studio / Xcode)
 
 ### Installation
@@ -90,6 +152,22 @@ src/
    ```
    *(or `yarn install`)*
 
+### Backend configuration
+
+Set these environment variables when the local MySQL settings differ from the defaults:
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=smarttasks_db
+JWT_SECRET=replace_with_a_long_random_secret
+PORT=5000
+```
+
+Run `backend-java/sql/schema.sql` in MySQL before starting the backend.
+
 ### Running the App
 
 - **For Android**:
@@ -102,10 +180,23 @@ src/
   npx react-native run-ios
   ```
 
-## 🔐 Login Demo
-To test the app, you can use the following default credentials on the login screen:
-- **Username**: `admin`
-- **Password**: `1234`
+- **Start the Core Java backend** (from the `backend-java` directory):
+  ```bash
+  mvn compile exec:java
+  ```
+
+The frontend API URL is configured in `src/services/api.js`. For a physical
+Android device, replace the local network IP with the IP address of the machine
+running the backend. For an Android emulator, use the host address appropriate
+for your emulator configuration.
+
+## 🔐 Authentication
+
+Create an account from the Sign Up screen or use an existing account. Passwords
+are hashed with bcrypt and successful login returns a JWT valid for seven days.
+
+The `backend-java` folder is the only backend used by the mobile app. The mobile
+client connects to its REST API through Axios; it never connects directly to MySQL.
 
 ---
 <div align="center">
