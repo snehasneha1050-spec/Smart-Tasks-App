@@ -18,7 +18,7 @@ import java.time.temporal.ChronoUnit;
 public final class Application {
     private static final Gson JSON = new GsonBuilder().serializeNulls().create();
     private static final SecretKey JWT_KEY = Keys.hmacShaKeyFor(
-            Database.env("JWT_SECRET", "smarttasks_secret_key_2026_change_me").getBytes(StandardCharsets.UTF_8));
+            Database.env("JWT_SECRET", "smarttasks_default_jwt_secret_key_2026_change_me").getBytes(StandardCharsets.UTF_8));
 
     public static void main(String[] args) throws IOException {
         int port = Integer.parseInt(Database.env("PORT", "5000"));

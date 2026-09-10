@@ -24,11 +24,8 @@ const userSlice = createSlice({
       state.username = null;
       state.sessionToken = null;
     },
-    setSessionToken: (state, action) => {
-      state.sessionToken = action.payload || null;
-    },
   },
 });
 
-export const { loginUser, logoutUser, setSessionToken } = userSlice.actions;
+export const { loginUser, logoutUser } = userSlice.actions;
 export default userSlice.reducer;

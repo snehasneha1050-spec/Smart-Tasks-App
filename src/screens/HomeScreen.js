@@ -46,7 +46,9 @@ const HomeScreen = ({ navigation }) => {
   const filteredTasks = useMemo(() => tasks.filter(task => {
     const matchesFilter = filter === 'all' || (filter === 'completed' && task.completed) || (filter === 'pending' && !task.completed);
     const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
+    const matchesSearch = [task.title, task.description]
+      .filter(value => typeof value === 'string')
+      .some(value => value.toLowerCase().includes(searchLower));
     return matchesFilter && matchesSearch;
   }), [tasks, filter, searchQuery]);
 

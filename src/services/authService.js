@@ -20,7 +20,3 @@ export const resetPassword = async ({ username, newPassword }) => {
   const response = await api.post('/auth/reset-password', { username, newPassword });
   return response.data;
 };
-
-export const logout = () => {
-  setAuthToken(null);
-};

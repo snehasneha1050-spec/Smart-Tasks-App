@@ -35,15 +35,6 @@ function AppContent() {
         await clearSavedSession();
         dispatch(logoutUser());
         navigationRef.navigate('Login');
-        return;
-      }
-
-      // JWT-based session is checked during login and app startup.
-      // The route guard here only ensures a valid token exists before protected screens are shown.
-      if (!sessionToken) {
-        await clearSavedSession();
-        dispatch(logoutUser());
-        navigationRef.navigate('Login');
       }
     });
 

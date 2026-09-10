@@ -81,12 +81,12 @@ backend-java/
 ## Architecture
 
 ```text
-React Native app -> Axios REST API -> Core Java backend -> MySQL
+React Native -> Axios -> Core Java HttpServer/JDBC -> MySQL
 ```
 
-The mobile app does not connect directly to MySQL. It calls the Express API using
-Axios. The backend validates the JWT token, runs parameterized JDBC queries, and
-returns JSON responses.
+The mobile app does not connect directly to MySQL. It calls the Core Java JDK
+`HttpServer` backend using Axios. The backend validates the JWT token, runs
+parameterized JDBC queries, and returns JSON responses.
 
 The main navigation flow is:
 

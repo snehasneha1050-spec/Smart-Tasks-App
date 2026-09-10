@@ -1,6 +1,4 @@
-import mockAsyncStorage from '@react-native-async-storage/async-storage/jest/async-storage-mock';
-
-jest.mock('@react-native-async-storage/async-storage', () => mockAsyncStorage);
+/* eslint-env jest */
 
 jest.mock('react-native-encrypted-storage', () => ({
   default: {
@@ -23,8 +21,6 @@ jest.mock('./src/utils/storage', () => {
       language: 'English',
       notificationsEnabled: true,
     })),
-    validateUserSession: jest.fn(() => Promise.resolve({ success: true })),
-    logoutUserSession: jest.fn(() => Promise.resolve({ success: true })),
   };
 });
 

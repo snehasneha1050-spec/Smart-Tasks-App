@@ -62,12 +62,6 @@ export const toggleComplete = createAsyncThunk('tasks/toggleComplete', async (ta
 const taskSlice = createSlice({
   name: 'tasks',
   initialState,
-  reducers: {
-    loadTasks: (state, action) => {
-      state.tasks = Array.isArray(action.payload) ? action.payload : [];
-      state.error = null;
-    },
-  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchTasks.pending, (state) => {
@@ -156,5 +150,4 @@ const taskSlice = createSlice({
   },
 });
 
-export const { loadTasks } = taskSlice.actions;
 export default taskSlice.reducer;

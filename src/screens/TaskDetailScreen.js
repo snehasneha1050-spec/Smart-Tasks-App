@@ -28,15 +28,23 @@ const TaskDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  const handleToggleComplete = () => {
-    dispatch(toggleComplete(task.id));
-    const pointsMessage = !task.completed ? `\n\n🏆 ${t.youEarnedPoints || 'You earned 10 points!'}` : '';
-    Alert.alert(
-      t.success || 'Success', 
-      task.completed 
-        ? (t.taskMarkedPending || 'Task marked as pending!') 
-        : ((t.taskMarkedCompleted || 'Task marked as completed! 🎉') + pointsMessage)
-    );
+  const handleToggleComplete = async () => {
+    try {
+      const resultAction = await dispatch(toggleComplete(task.id));
+      if (toggleComplete.rejected.match(resultAction)) {
+        throw new Error(resultAction.payload || 'Failed to update task.');
+      }
+
+      const pointsMessage = !task.completed ? `\n\n🏆 ${t.youEarnedPoints || 'You earned 10 points!'}` : '';
+      Alert.alert(
+        t.success || 'Success',
+        task.completed
+          ? (t.taskMarkedPending || 'Task marked as pending!')
+          : ((t.taskMarkedCompleted || 'Task marked as completed! 🎉') + pointsMessage)
+      );
+    } catch (error) {
+      Alert.alert(t.error || 'Error', error.message || 'Unable to update task.');
+    }
   };
 
   const handleEditTask = () => {

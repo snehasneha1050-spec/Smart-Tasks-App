@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { loginUser } from '../store/userSlice';
 import { setPreferences } from '../store/themeSlice';
 import { fetchTasks } from '../store/taskSlice';
-import { getSavedSession, clearSavedSession } from '../utils/storage';
+import { getSavedSession, clearSavedSession, loadUserPreferences } from '../utils/storage';
 import notifee from '@notifee/react-native';
 import { useAppStyles } from '../hooks/useAppStyles';
 import { setAuthToken } from '../services/api';
@@ -46,11 +46,9 @@ const SplashScreen = ({ navigation }) => {
 
         if (savedSession?.username && savedSession?.sessionToken) {
           setAuthToken(savedSession.sessionToken);
-          dispatch(setPreferences({
-            darkMode: false,
-            language: 'English',
-            notificationsEnabled: true,
-          }));
+          const preferences = await loadUserPreferences(savedSession.username);
+          if (!isActive) return;
+          dispatch(setPreferences(preferences));
           dispatch(loginUser({ username: savedSession.username, sessionToken: savedSession.sessionToken }));
           dispatch(fetchTasks());
 
@@ -71,11 +69,13 @@ const SplashScreen = ({ navigation }) => {
 
         if (!isActive) return;
         await clearSavedSession();
+        setAuthToken(null);
         navigation.replace('Login');
       } catch (error) {
         if (!isActive) return;
         console.error('Auto-login check failed:', error);
         await clearSavedSession();
+        setAuthToken(null);
         navigation.replace('Login');
       }
     };

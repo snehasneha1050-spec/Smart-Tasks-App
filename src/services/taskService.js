@@ -6,11 +6,6 @@ export const getTasks = async () => {
   return response.data;
 };
 
-export const getTaskById = async (id) => {
-  const response = await api.get(`/tasks/${id}`);
-  return response.data;
-};
-
 export const createTask = async (task) => {
   const response = await api.post('/tasks', task);
   return response.data;

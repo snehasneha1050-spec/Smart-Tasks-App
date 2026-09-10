@@ -92,17 +92,23 @@ const EditTaskScreen = ({ route, navigation }) => {
       }
     }
 
-    dispatch(updateTask(updatedTask));
+    try {
+      const resultAction = await dispatch(updateTask(updatedTask));
+      if (updateTask.rejected.match(resultAction)) {
+        throw new Error(resultAction.payload || 'Failed to update task.');
+      }
 
-    setTimeout(() => {
-      setLoading(false);
       Alert.alert(t.success || 'Success', 'Task updated successfully! ✅', [
         {
           text: t.ok || 'OK',
           onPress: () => navigation.goBack()
         }
       ]);
-    }, 500);
+    } catch (error) {
+      Alert.alert(t.error || 'Error', error.message || 'Unable to update task.');
+    } finally {
+      setLoading(false);
+    }
   }, [task, taskTitle, taskDescription, category, priority, isReminderSet, dueDate, subtasks, t, dispatch, navigation]);
 
   const onDateChange = useCallback((_, selectedDate) => {

@@ -8,6 +8,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAppStyles } from '../hooks/useAppStyles';
 import { CustomAlert as Alert } from '../components/CustomAlert';
 import { loadUserPreferences, saveUserPreferences, clearSavedSession } from '../utils/storage';
+import { setAuthToken } from '../services/api';
 
 const SettingsScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -63,6 +64,7 @@ const SettingsScreen = ({ navigation }) => {
         text: t.logout,
         onPress: async () => {
           await clearSavedSession();
+          setAuthToken(null);
           dispatch(logoutUser());
           navigation.replace('Login');
         },
